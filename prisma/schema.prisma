@@ -1,0 +1,9 @@
+// Etapa 1: solo configuración. Los modelos se definen en la Etapa 2.
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

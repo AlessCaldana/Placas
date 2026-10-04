@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Colores PROVISIONALES de la identidad PLACA (verde oscuro, antracita, dorado).
+   Se ajustarán con los valores reales de Figma Make. */
+:root {
+  --background: #0f2a20;
+  --foreground: #efe9dc;
+  --brand-gold: #c9a24a;
+  --brand-anthracite: #25282b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-gold: var(--brand-gold);
+  --color-anthracite: var(--brand-anthracite);
+  /* Tipografía provisional (sistema). Se definirá con la de Figma Make. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
