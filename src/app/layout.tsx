@@ -1,15 +1,27 @@
 import type { Metadata } from "next";
+import "@fontsource-variable/dm-sans";
+import "@fontsource/instrument-serif/400.css";
+import "@fontsource/instrument-serif/400-italic.css";
 import "./globals.css";
+import { LocaleProvider } from "@/components/ui/LocaleProvider";
+import { getLocalePreference } from "@/lib/locale";
 
 export const metadata: Metadata = {
   title: "PLACA — Decorative Italiane",
-  description: "Placche decorative e articoli per la casa, il garage e l'ufficio.",
+  description: "Targhe decorative per raccontare le tue passioni.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const preferredLocale = await getLocalePreference();
+  const initialLocale = preferredLocale ?? "it";
+
   return (
-    <html lang="it" className="h-full antialiased">
-      <body className="flex min-h-full flex-col">{children}</body>
+    <html lang={initialLocale} className="h-full antialiased">
+      <body className="flex min-h-full flex-col">
+        <LocaleProvider initialLocale={initialLocale} showPrompt={!preferredLocale}>
+          {children}
+        </LocaleProvider>
+      </body>
     </html>
   );
 }

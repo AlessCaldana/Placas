@@ -45,3 +45,6 @@ next-env.d.ts
 
 # prisma generated client
 /src/generated
+
+# uploaded test product images
+/public/uploads/products/
