@@ -8,8 +8,9 @@ import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import { Brand } from "./Brand";
 import { whatsappLink } from "@/lib/site";
+import type { SiteSettings } from "@/lib/services/site-settings";
 
-export function PublicHeader() {
+export function PublicHeader({ settings }: { settings: SiteSettings }) {
   const { locale, t } = useLocale();
   const links = [
     { href: "/", label: t("nav.home") },
@@ -21,7 +22,7 @@ export function PublicHeader() {
   return (
     <header className="public-header">
       <div className="nav-wrap">
-        <Brand locale={locale} />
+        <Brand locale={locale} settings={settings} />
         <nav
           id="main-nav"
           className={open ? "nav-links open" : "nav-links"}
@@ -32,13 +33,23 @@ export function PublicHeader() {
               {l.label}
             </Link>
           ))}
+          <Link
+            className="nav-reserved-mobile"
+            href="/admin/dashboard"
+            onClick={() => setOpen(false)}
+          >
+            {t("nav.reserved")}
+          </Link>
         </nav>
         <div className="nav-actions">
-          <ButtonLink href={whatsappLink()} kind="gold" icon="chat">
+          <LocaleSwitcher />
+          <ButtonLink href={whatsappLink(undefined, settings.whatsappNumber)} kind="gold" icon="chat">
             {t("cta.whatsapp")}
           </ButtonLink>
+          <Link className="btn btn-gold reserved-link" href="/admin/dashboard">
+            {t("nav.reserved")}
+          </Link>
         </div>
-        <LocaleSwitcher />
         <button
           className="mobile-menu"
           aria-label={open ? t("admin.closeMenu") : t("admin.openMenu")}

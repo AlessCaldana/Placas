@@ -1,32 +1,85 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { locales, type Locale } from "@/messages";
 import { useLocale } from "./LocaleProvider";
 
-const languageNames: Record<Locale, string> = {
-  it: "Italiano",
-  fr: "Français",
-  es: "Español",
-  en: "English",
+const languages: Record<Locale, { flag: string; name: string }> = {
+  it: { flag: "🇮🇹", name: "Italiano" },
+  fr: { flag: "🇫🇷", name: "Français" },
+  es: { flag: "🇪🇸", name: "Español" },
+  en: { flag: "🇬🇧", name: "English" },
+  nl: { flag: "🇳🇱", name: "Nederlands" },
 };
 
 export function LocaleSwitcher() {
   const { locale, setLocale, t } = useLocale();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  const selected = languages[locale];
 
   return (
-    <label className="locale-switcher">
-      <span className="sr-only">{t("language.label")}</span>
-      <select
-        aria-label={t("language.label")}
-        value={locale}
-        onChange={(event) => setLocale(event.target.value as Locale)}
+    <div className={`locale-switcher${open ? " is-open" : ""}`} ref={rootRef}>
+      <button
+        ref={triggerRef}
+        className="locale-trigger"
+        type="button"
+        aria-label={`${t("language.label")}: ${selected.name}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((value) => !value)}
       >
-        {locales.map((option) => (
-          <option key={option} value={option}>
-            {languageNames[option]}
-          </option>
-        ))}
-      </select>
-    </label>
+        <span className="locale-current-flag" aria-hidden="true">{selected.flag}</span>
+        <i aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="locale-menu" role="menu" aria-label={t("language.label")}>
+          {locales.map((option) => {
+            const language = languages[option];
+            const active = option === locale;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="menuitemradio"
+                aria-checked={active}
+                className={active ? "active" : undefined}
+                onClick={() => {
+                  setLocale(option);
+                  setOpen(false);
+                }}
+              >
+                <span className="locale-option-flag" aria-hidden="true">{language.flag}</span>
+                <span>{language.name}</span>
+                <small>{option.toUpperCase()}</small>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

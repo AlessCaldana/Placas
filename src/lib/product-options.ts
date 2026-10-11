@@ -1,6 +1,17 @@
 export const productOptionsStorageKey = "placa_product_options_v1";
 export const defaultProductSizes = ["30 × 40 cm", "45 × 30 cm"];
 export const defaultProductPrices = [5];
+const maxProductDimensionCm = 200;
+
+export function normalizeProductSize(value: string): string | null {
+  const match = value.match(/^\s*(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(?:cm)?\s*$/i);
+  if (!match) return null;
+  const dimensions = match.slice(1).map((part) => Number(part.replace(",", ".")));
+  if (dimensions.some((dimension) => !Number.isFinite(dimension) || dimension <= 0 || dimension > maxProductDimensionCm)) {
+    return null;
+  }
+  return `${dimensions[0]} x ${dimensions[1]} cm`;
+}
 
 export type ProductOptionPreferences = {
   sizes: string[];

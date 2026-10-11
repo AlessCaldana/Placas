@@ -1,6 +1,68 @@
+import { randomUUID } from "node:crypto";
 import type { AdminProduct, AdminState } from "@/lib/demo-data";
 import { getDb } from "@/lib/db";
-import type { NewProductInput } from "@/lib/validators/product";
+import { draftCategoryPlaceholder, type NewProductInput } from "@/lib/validators/product";
+
+export type PublicCatalogProduct = {
+  id: string;
+  name: string;
+  description: string;
+  path: string;
+  size: string;
+  price: string;
+  priceCents: number;
+  referenceCode?: string;
+  brand?: string | null;
+  model?: string | null;
+  material?: string | null;
+  tone: number;
+  categoryIds: string[];
+  available: boolean;
+  imageUrl: string | null;
+  quantity: number | null;
+};
+
+/** `null` quantity means stock is not tracked, so the product never runs out. */
+function isOutOfStock(quantity: number | null): boolean {
+  return quantity !== null && quantity <= 0;
+}
+
+export async function listPublicProducts(): Promise<PublicCatalogProduct[]> {
+  const products = await getDb().product.findMany({
+    where: { status: "PUBLISHED", category: { active: true } },
+    include: {
+      category: { include: { parent: true } },
+      images: { orderBy: { position: "asc" }, take: 1 },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return products.map((product, index) => {
+    const category = product.category;
+    const names = category.parent
+      ? [category.parent.name, category.name]
+      : [category.name];
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description ?? "",
+      path: names.join(" · "),
+      size: product.size,
+      price: `€ ${product.price.toFixed(2).replace(".", ",")}`,
+      priceCents: Number(product.price.toFixed(2).replace(".", "")),
+      referenceCode: product.referenceCode,
+      brand: product.brand,
+      model: product.model,
+      material: product.material,
+      tone: index % 4,
+      available: product.status === "PUBLISHED" && !isOutOfStock(product.quantity),
+      imageUrl: product.images[0]?.url ?? null,
+      quantity: product.quantity,
+      categoryIds: category.parent
+        ? [category.id, category.parent.id]
+        : [category.id],
+    };
+  });
+}
 
 function toSlug(value: string): string {
   return (
@@ -24,14 +86,17 @@ function toAdminProduct(product: {
   images?: { url: string }[];
 }): AdminProduct {
   return {
-    name: product.name,
+    name: product.name || "—",
     reference: product.referenceCode,
     imageUrl: product.images?.[0]?.url ?? null,
-    category: product.category.name,
+    category: product.category.name === draftCategoryPlaceholder ? "—" : product.category.name,
     size: product.size,
     price: product.price.toNumber(),
     qty: product.quantity,
-    state: product.status.toLocaleLowerCase("en") as AdminState,
+    // A published product with no stock left is shown as unavailable automatically.
+    state: product.status === "PUBLISHED" && isOutOfStock(product.quantity)
+      ? "unavailable"
+      : product.status.toLocaleLowerCase("en") as AdminState,
   };
 }
 
@@ -41,6 +106,61 @@ export async function listAdminProducts(): Promise<AdminProduct[]> {
     orderBy: { createdAt: "desc" },
   });
   return products.map(toAdminProduct);
+}
+
+export type AdminProductDetails = {
+  referenceCode: string;
+  name: string;
+  description: string;
+  categoryName: string;
+  subcategoryName: string;
+  brand: string;
+  model: string;
+  size: string;
+  price: number;
+  quantity: number | null;
+  material: string;
+  status: AdminState;
+  images: string[];
+};
+
+export async function getAdminProduct(referenceCode: string): Promise<AdminProductDetails | null> {
+  const product = await getDb().product.findUnique({
+    where: { referenceCode },
+    include: { category: { include: { parent: true } }, images: { orderBy: { position: "asc" } } },
+  });
+  if (!product) return null;
+  return {
+    referenceCode: product.referenceCode,
+    name: product.name,
+    description: product.description ?? "",
+    categoryName: product.category.name === draftCategoryPlaceholder
+      ? ""
+      : product.category.parent?.name ?? product.category.name,
+    subcategoryName: product.category.name === draftCategoryPlaceholder
+      ? ""
+      : product.category.parent ? product.category.name : "",
+    brand: product.brand ?? "",
+    model: product.model ?? "",
+    size: product.size,
+    price: product.price.toNumber(),
+    quantity: product.quantity,
+    material: product.material ?? "",
+    status: product.status.toLocaleLowerCase("en") as AdminState,
+    images: product.images.map((image) => image.url),
+  };
+}
+
+export async function deleteAdminProduct(referenceCode: string): Promise<string[] | null> {
+  return getDb().$transaction(async (transaction) => {
+    const product = await transaction.product.findUnique({
+      where: { referenceCode },
+      select: { images: { select: { url: true } } },
+    });
+    if (!product) return null;
+    await transaction.product.delete({ where: { referenceCode } });
+    return product.images.map((image) => image.url);
+  });
 }
 
 export async function createAdminProduct(
@@ -72,7 +192,7 @@ export async function createAdminProduct(
 
     const product = await transaction.product.create({
       data: {
-        referenceCode: input.referenceCode,
+        referenceCode: input.referenceCode || `DRAFT-${randomUUID()}`,
         name: input.name,
         description: input.description,
         categoryId: category.id,
@@ -94,6 +214,63 @@ export async function createAdminProduct(
       include: { category: true, images: { orderBy: { position: "asc" } } },
     });
     return toAdminProduct(product);
+  });
+}
+
+export async function updateAdminProduct(
+  referenceCode: string,
+  input: NewProductInput,
+  imageUrls?: string[],
+) {
+  const db = getDb();
+  return db.$transaction(async (transaction) => {
+    const rootSlug = toSlug(input.categoryName);
+    const root = await transaction.category.upsert({
+      where: { slug: rootSlug },
+      update: { name: input.categoryName },
+      create: { slug: rootSlug, name: input.categoryName },
+    });
+    let category = root;
+    if (input.subcategoryName) {
+      const slug = `${rootSlug}-${toSlug(input.subcategoryName)}`;
+      category = await transaction.category.upsert({
+        where: { slug },
+        update: { name: input.subcategoryName, parentId: root.id },
+        create: { slug, name: input.subcategoryName, parentId: root.id },
+      });
+    }
+    const previousImages = imageUrls
+      ? await transaction.productImage.findMany({
+          where: { product: { referenceCode } },
+          select: { url: true },
+        })
+      : [];
+    const product = await transaction.product.update({
+      where: { referenceCode },
+      data: {
+        referenceCode: input.referenceCode || referenceCode,
+        name: input.name,
+        description: input.description,
+        categoryId: category.id,
+        brand: input.brand,
+        model: input.model,
+        size: input.size,
+        price: input.price,
+        quantity: input.quantity,
+        material: input.material,
+        status: input.status,
+        ...(imageUrls
+          ? {
+              images: {
+                deleteMany: {},
+                create: imageUrls.map((url, position) => ({ url, altText: input.name, position })),
+              },
+            }
+          : {}),
+      },
+      include: { category: true, images: { orderBy: { position: "asc" } } },
+    });
+    return { product: toAdminProduct(product), previousImages: previousImages.map((image) => image.url) };
   });
 }
 

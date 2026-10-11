@@ -2,7 +2,7 @@
 
 Web pública (catálogo) + panel privado de administración. Next.js (App Router) · TypeScript · Tailwind CSS · PostgreSQL · Prisma.
 
-> Estado: Etapa 2 en curso: PostgreSQL de prueba conectado y guardado de productos activo. El panel `/admin` sigue **sin login** (temporal); aún no hay autenticación.
+> Estado: Etapa 2 en curso: PostgreSQL de prueba conectado y guardado de productos activo. El panel `/admin` y `/api/admin` exigen login con email y contraseña (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `AUTH_SECRET` en `.env`).
 
 ## Requisitos
 
@@ -45,7 +45,7 @@ Esta carpeta local es adecuada para la prueba; antes de desplegar en producción
 
 ## Panel de administración (temporal)
 
-Abierto sin login en `http://localhost:3000/admin` mientras se desarrolla. En producción devuelve 404 salvo `ADMIN_PREVIEW=1`; **no lo actives en un servidor público**. El login real llega en la Etapa 2.
+Abierto sin login en `http://localhost:3000/admin` mientras se desarrolla. No lo publiques así en un servidor público; la autenticación debe estar activa antes del despliegue.
 
 ## Scripts
 
@@ -80,3 +80,17 @@ docs/             decisiones y documentación
 - El idioma se conserva en una cookie `placa_locale`; la búsqueda cruzada usa alias de categorías para los datos de muestra. El catálogo real necesitará guardar traducciones y términos de búsqueda por registro.
 - Las medidas y precios personalizados del formulario se guardan en `localStorage` de este navegador; los presets globales de `product_options` están en la base de prueba.
 - La base creada por esta migración es solo de prueba. No la uses para datos oficiales ni de producción.
+
+## Pagos online (Stripe Connect)
+
+Los pedidos se cobran con Stripe Checkout como *destination charges*: la tienda (cuenta conectada) recibe productos + envío y la plataforma cobra su comisión (1 € por producto, máximo 3 € por pedido) más el coste de Stripe, calculado con margen para tarjetas no europeas (`src/lib/payments/checkout-pricing.ts`). El comprador ve los productos a su precio y una sola línea «Spedizione e gestione».
+
+1. Rellena en `.env` `STRIPE_SECRET_KEY`, `STRIPE_CONNECTED_ACCOUNT_ID`, `STRIPE_WEBHOOK_SECRET` y `NEXT_PUBLIC_SITE_URL` (ver `.env.example`).
+2. Aplica la migración `prisma/migrations/20261011180000_checkout_orders` y define los precios de envío en *Impostazioni → Spedizioni*.
+3. En local, reenvía los webhooks con Stripe CLI:
+
+```bash
+stripe listen --events checkout.session.completed,checkout.session.expired,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed --forward-to localhost:3000/api/stripe/webhook
+```
+
+Tarjeta de prueba: `4242 4242 4242 4242`, fecha futura, cualquier CVC. Los pedidos pagados aparecen en *Vendite* y las cifras en *Statistiche*; el stock se descuenta al confirmarse el pago.

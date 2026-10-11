@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
@@ -17,10 +17,18 @@ const items: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/impostazioni", label: "admin.nav.settings", icon: "settings" },
 ];
 
-export function AdminShell({ children }: { children: ReactNode }) {
+export function AdminShell({ children, showLogout }: { children: ReactNode; showLogout: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { t } = useLocale();
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    router.replace("/login");
+    router.refresh();
+  };
+
   return (
     <div className="admin-shell">
       <aside className={open ? "admin-side open" : "admin-side"} id="admin-side">
@@ -51,10 +59,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="side-bottom">
           <LocaleSwitcher />
-          <Link href="/">
+          <Link href="/" className="admin-public-link">
             <Icon name="arrow" size={19} />
             {t("admin.publicSite")}
           </Link>
+          {showLogout && (
+            <button type="button" className="admin-logout-link" onClick={logout}>
+              {t("admin.logout")}
+            </button>
+          )}
         </div>
       </aside>
       {open && (

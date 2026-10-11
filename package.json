@@ -26,7 +26,8 @@
     "next": "16.3.8",
     "pg": "^8.23.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "stripe": "^23.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -45,5 +46,23 @@
   },
   "engines": {
     "node": ">=20.19"
-  }
+  },
+  "description": "Web pública (catálogo) + panel privado de administración. Next.js (App Router) · TypeScript · Tailwind CSS · PostgreSQL · Prisma.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlessCaldana/Placas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/AlessCaldana/Placas/issues"
+  },
+  "homepage": "https://github.com/AlessCaldana/Placas#readme"
 }

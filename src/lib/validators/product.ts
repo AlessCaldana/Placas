@@ -1,4 +1,5 @@
 const productStatuses = ["DRAFT", "PUBLISHED", "UNAVAILABLE"] as const;
+export const draftCategoryPlaceholder = "__draft__";
 
 export type NewProductInput = {
   referenceCode: string;
@@ -28,9 +29,11 @@ export function parseNewProductInput(
   const subcategoryName =
     typeof input.subcategoryName === "string" ? input.subcategoryName.trim() : "";
   const size = typeof input.size === "string" ? input.size.trim() : "";
+  const status = input.status as NewProductInput["status"];
+  const isDraft = status === "DRAFT";
   const rawPrice = typeof input.price === "number" ? String(input.price) : input.price;
   const priceText = typeof rawPrice === "string" ? rawPrice.trim().replace(",", ".") : "";
-  const price = Number(priceText);
+  const price = priceText ? Number(priceText) : isDraft ? 0 : Number.NaN;
   const rawQuantity = input.quantity;
   const quantityText =
     rawQuantity === null || rawQuantity === undefined || rawQuantity === ""
@@ -39,21 +42,23 @@ export function parseNewProductInput(
   const quantity = quantityText === null ? null : Number(quantityText);
 
   if (
-    !referenceCode ||
+    (!isDraft && !referenceCode) ||
     referenceCode.length > 64 ||
-    !name ||
+    (!isDraft && !name) ||
     name.length > 200 ||
-    !categoryName ||
+    (!isDraft && (!categoryName || categoryName === draftCategoryPlaceholder)) ||
     categoryName.length > 120 ||
     subcategoryName.length > 120 ||
-    !size ||
+    (!isDraft && !size) ||
     size.length > 80 ||
-    !/^\d+(?:\.\d{1,2})?$/.test(priceText) ||
+    (priceText !== "" && !/^\d+(?:\.\d{1,2})?$/.test(priceText)) ||
+    (!isDraft && priceText === "") ||
     !Number.isFinite(price) ||
-    price <= 0 ||
+    (!isDraft && price <= 0) ||
+    (isDraft && price < 0) ||
     price > 99_999_999.99 ||
     (quantity !== null && (!Number.isInteger(quantity) || quantity < 0)) ||
-    !productStatuses.includes(input.status as (typeof productStatuses)[number])
+    !productStatuses.includes(status)
   ) {
     return { ok: false };
   }
@@ -67,7 +72,7 @@ export function parseNewProductInput(
       referenceCode,
       name,
       description: optionalText(input.description),
-      categoryName,
+      categoryName: categoryName || (isDraft ? draftCategoryPlaceholder : ""),
       subcategoryName: subcategoryName || null,
       brand: optionalText(input.brand),
       model: optionalText(input.model),
@@ -75,7 +80,7 @@ export function parseNewProductInput(
       price: price.toFixed(2),
       quantity,
       material: optionalText(input.material),
-      status: input.status as NewProductInput["status"],
+      status,
     },
   };
 }

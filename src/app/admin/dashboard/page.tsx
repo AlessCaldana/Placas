@@ -5,10 +5,22 @@ import { adminProducts, adminSales } from "@/lib/demo-data";
 import { eur } from "@/lib/format";
 import { getRequestLocale } from "@/lib/locale";
 import { translate } from "@/messages";
+import { isDatabaseConfigured } from "@/lib/db";
+import { getDashboardInventory } from "@/lib/services/dashboard";
 
 export default async function Dashboard() {
   const locale = await getRequestLocale();
   const t = (key: string) => translate(locale, key);
+  const databaseConfigured = isDatabaseConfigured();
+  let inventory: Awaited<ReturnType<typeof getDashboardInventory>> | null = null;
+  let databaseError = false;
+  if (databaseConfigured) {
+    try {
+      inventory = await getDashboardInventory();
+    } catch {
+      databaseError = true;
+    }
+  }
   // Todo se calcula a partir de los datos demostrativos (como se hará con los reales).
   const available = adminProducts.filter(
     (p) => p.state === "published" && (p.qty ?? 0) > 0,
@@ -42,6 +54,21 @@ export default async function Dashboard() {
     },
     { name: t("admin.dashboard.revenue"), value: eur(revenue), icon: "bar" },
   ];
+  const summaryStats = inventory
+    ? [
+        { name: t("admin.dashboard.totalProducts"), value: String(inventory.total), icon: "box" as const },
+        { name: t("admin.dashboard.availableProducts"), value: String(inventory.available), icon: "category" as const },
+        { name: t("admin.dashboard.outOfStock"), value: String(inventory.outOfStock), icon: "inbox" as const },
+        { name: t("admin.dashboard.draftProducts"), value: String(inventory.drafts), icon: "settings" as const },
+      ]
+    : databaseError
+      ? [
+          { name: t("admin.dashboard.totalProducts"), value: "—", icon: "box" as const },
+          { name: t("admin.dashboard.availableProducts"), value: "—", icon: "category" as const },
+          { name: t("admin.dashboard.outOfStock"), value: "—", icon: "inbox" as const },
+          { name: t("admin.dashboard.draftProducts"), value: "—", icon: "settings" as const },
+        ]
+      : stats;
 
   return (
     <div className="dashboard-page">
@@ -49,7 +76,7 @@ export default async function Dashboard() {
         title={t("admin.dashboard.title")}
         subtitle={t("admin.dashboard.subtitle")}
       />
-      <PreviewBanner />
+      {!databaseConfigured ? <PreviewBanner /> : databaseError ? <p className="field-error" role="alert">{t("admin.database.unavailable")}</p> : null}
 
       <section className="dashboard-welcome">
         <div>
@@ -67,7 +94,7 @@ export default async function Dashboard() {
       </section>
 
       <div className="stats-grid">
-        {stats.map((s) => (
+        {summaryStats.map((s) => (
           <div className="stat-card" key={s.name}>
             <div className="stat-top">
               <span>{s.name}</span>
@@ -80,6 +107,9 @@ export default async function Dashboard() {
         ))}
       </div>
 
+      {inventory ? <InventorySummary inventory={inventory} locale={locale} /> : databaseError ? (
+        <section className="admin-card"><h2>{t("admin.dashboard.dataUnavailable")}</h2><p>{t("admin.database.unavailable")}</p></section>
+      ) : <>
       <div className="dashboard-grid">
         <section className="admin-card">
           <div className="card-head">
@@ -203,6 +233,74 @@ export default async function Dashboard() {
           ))}
         </section>
       </div>
+      </>}
     </div>
+  );
+}
+
+function InventorySummary({
+  inventory,
+  locale,
+}: {
+  inventory: Awaited<ReturnType<typeof getDashboardInventory>>;
+  locale: Parameters<typeof translate>[0];
+}) {
+  const t = (key: string) => translate(locale, key);
+
+  return (
+    <>
+      <div className="dashboard-grid">
+        <section className="admin-card">
+          <div className="card-head"><div><h2>{t("admin.dashboard.mostViewed")}</h2><p>{t("admin.dashboard.viewsHint")}</p></div></div>
+          {inventory.mostViewed ? <div className="rank-row">
+            <span><Icon name="eye" size={18} /></span>
+            <b>{inventory.mostViewed.name}<small className="dashboard-reference">{inventory.mostViewed.referenceCode}</small></b>
+            <strong>{inventory.mostViewed.viewCount} {t("admin.dashboard.views")}</strong>
+          </div> : <p className="dashboard-empty">{t("admin.dashboard.noViews")}</p>}
+        </section>
+
+        <section className="admin-card">
+          <div className="card-head">
+            <div>
+              <h2>{t("admin.dashboard.lowStock")}</h2>
+              <p>{t("admin.dashboard.lowStockHint")}</p>
+            </div>
+          </div>
+          {inventory.lowStock.length ? inventory.lowStock.map((product) => (
+            <div className="rank-row" key={product.id}>
+              <span><Icon name="box" size={18} /></span>
+              <b>{product.name}<small className="dashboard-reference">{product.referenceCode}</small></b>
+              <strong>{product.quantity}</strong>
+            </div>
+          )) : <p className="dashboard-empty">{t("admin.dashboard.noLowStock")}</p>}
+        </section>
+
+        <section className="admin-card">
+          <div className="card-head">
+            <div>
+              <h2>{t("admin.dashboard.salesTitle")}</h2>
+            </div>
+          </div>
+          <p className="dashboard-empty">{t("admin.dashboard.salesNotTracked")}</p>
+        </section>
+      </div>
+
+      <section className="admin-card dashboard-recent-card">
+        <div className="card-head">
+          <div>
+            <h2>{t("admin.dashboard.latestProducts")}</h2>
+            <p>{t("admin.dashboard.recentlyAdded")}</p>
+          </div>
+          <Link href="/admin/prodotti">{t("admin.dashboard.viewAll")}</Link>
+        </div>
+        {inventory.recent.length ? inventory.recent.map((product) => (
+          <div className="rank-row" key={product.id}>
+            <span><Icon name="box" size={18} /></span>
+            <b>{product.name}<small className="dashboard-reference">{product.referenceCode} · {product.category.name}</small></b>
+            <strong>{t(`admin.status.${product.status.toLocaleLowerCase("en")}`)}</strong>
+          </div>
+        )) : <p className="dashboard-empty">{t("admin.dashboard.noProducts")}</p>}
+      </section>
+    </>
   );
 }

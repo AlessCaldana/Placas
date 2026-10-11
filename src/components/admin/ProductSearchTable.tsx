@@ -49,7 +49,7 @@ export function ProductSearchTable({ products }: { products: AdminProduct[] }) {
               {visibleProducts.map((product) => {
                 const categoryKey = categoryMessageKey(product.category);
                 return (
-                  <tr key={product.name}>
+                  <tr key={product.reference}>
                     <td>
                       <div className="product-name-cell">
                         {product.imageUrl ? (
@@ -75,16 +75,19 @@ export function ProductSearchTable({ products }: { products: AdminProduct[] }) {
                       <code>{product.reference}</code>
                     </td>
                     <td>{categoryKey ? t(categoryKey) : product.category}</td>
-                    <td>{product.size}</td>
+                    <td>{product.size || "—"}</td>
                     <td>
-                      <b>{currency.format(product.price)}</b>
+                      <b>{product.price > 0 ? currency.format(product.price) : "—"}</b>
                     </td>
                     <td>{product.qty ?? "—"}</td>
                     <td>
                       <StatusBadge state={product.state} />
                     </td>
                     <td>
-                      <Link className="row-link" href="/admin/prodotti/nuovo">
+                      <Link
+                        className="row-link"
+                        href={`/admin/prodotti/${encodeURIComponent(product.reference)}/modifica`}
+                      >
                         {t("admin.products.edit")}
                       </Link>
                     </td>

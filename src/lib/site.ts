@@ -7,7 +7,7 @@ export const site = {
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "",
 };
 
-export function whatsappLink(message?: string): string {
-  const base = `https://wa.me/${site.whatsappNumber}`;
+export function whatsappLink(message?: string, whatsappNumber = site.whatsappNumber): string {
+  const base = `https://wa.me/${whatsappNumber}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }

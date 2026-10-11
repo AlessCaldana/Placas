@@ -1,6 +1,12 @@
 import { demoCategories } from "./demo-data";
 
-export type Cat = { id: number; name: string; parentId: number | null; active: boolean };
+export type Cat = {
+  id: number;
+  name: string;
+  parentId: number | null;
+  active: boolean;
+  databaseId?: string;
+};
 export type NewCat = Omit<Cat, "id">;
 
 // Subcategorías de ejemplo (DEMOSTRATIVO).

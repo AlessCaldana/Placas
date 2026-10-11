@@ -20,6 +20,13 @@ enum CatalogLocale {
   EN
 }
 
+enum OrderStatus {
+  PENDING
+  PAID
+  NEEDS_REVIEW
+  CANCELLED
+}
+
 enum ProductOptionType {
   SIZE
   PRICE
@@ -69,10 +76,12 @@ model Product {
   size          String               @db.VarChar(80)
   price         Decimal              @db.Decimal(10, 2)
   quantity      Int?
+  viewCount     Int                  @default(0)
   material      String?              @db.VarChar(120)
   status        ProductStatus        @default(DRAFT)
   images        ProductImage[]
   translations  ProductTranslation[]
+  orderItems    OrderItem[]
   createdAt     DateTime             @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime             @default(now()) @updatedAt @db.Timestamptz(6)
 
@@ -118,4 +127,62 @@ model ProductOption {
 
   @@unique([type, value])
   @@map("product_options")
+}
+
+model SiteSetting {
+  id            String   @id @default("default") @db.VarChar(32)
+  name          String   @db.VarChar(120)
+  logoUrl       String?  @db.VarChar(500)
+  email         String?  @db.VarChar(254)
+  phone         String?  @db.VarChar(32)
+  whatsappNumber String? @db.VarChar(20)
+  // Shipping price per zone in euro cents. NULL = no shipping to that zone.
+  shippingItalyCents Int?
+  shippingEuCents    Int?
+  shippingWorldCents Int?
+  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("site_settings")
+}
+
+// Online orders paid with Stripe Checkout. Amounts are euro cents.
+model Order {
+  id                  String      @id @default(uuid()) @db.Uuid
+  status              OrderStatus @default(PENDING)
+  stripeSessionId     String?     @unique @db.VarChar(255)
+  stripePaymentIntent String?     @db.VarChar(255)
+  country             String      @db.Char(2)
+  itemCount           Int
+  productsCents       Int
+  shippingCents       Int
+  platformFeeCents    Int
+  applicationFeeCents Int
+  totalCents          Int
+  customerEmail       String?     @db.VarChar(254)
+  customerName        String?     @db.VarChar(200)
+  shippingAddress     Json?
+  reviewReason        String?     @db.VarChar(200)
+  items               OrderItem[]
+  paidAt              DateTime?   @db.Timestamptz(6)
+  createdAt           DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([status, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  orderId        String   @db.Uuid
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String?  @db.Uuid
+  product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  referenceCode  String   @db.VarChar(64)
+  name           String   @db.VarChar(200)
+  unitPriceCents Int
+  quantity       Int
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
 }

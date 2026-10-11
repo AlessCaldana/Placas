@@ -1,10 +1,15 @@
 // DATOS DEMOSTRATIVOS (solo para la maqueta de diseño). Se sustituyen por datos reales en las Etapas 4 a 6.
 export type DemoProduct = {
   name: string;
+  description: string;
+  referenceCode: string;
   path: string;
   size: string;
   price: string;
   tone: number;
+  available?: boolean;
+  imageUrl?: string | null;
+  quantity?: number | null;
 };
 
 export const demoCategories = [
@@ -21,6 +26,8 @@ export const demoCategories = [
 export const demoProducts: DemoProduct[] = [
   {
     name: "BMW S1000RR — Garage Edition",
+    description: "Targa decorativa ispirata alla BMW S1000RR, con un look sportivo pensato per dare carattere al tuo garage o alla tua collezione.",
+    referenceCode: "PL-001",
     path: "Moto · BMW · S1000RR",
     size: "30 × 20 cm",
     price: "€ 42,00",
@@ -28,6 +35,8 @@ export const demoProducts: DemoProduct[] = [
   },
   {
     name: "BMW S1000RR — Classic",
+    description: "Una targa dal design classico dedicata alla BMW S1000RR, ideale per gli appassionati di moto e corse.",
+    referenceCode: "PL-002",
     path: "Moto · BMW · S1000RR",
     size: "30 × 20 cm",
     price: "€ 38,00",
@@ -35,6 +44,8 @@ export const demoProducts: DemoProduct[] = [
   },
   {
     name: "Rock Edition",
+    description: "Targa decorativa a tema rock, perfetta per personalizzare uno studio musicale, una sala prove o il tuo angolo preferito.",
+    referenceCode: "PL-003",
     path: "Musica · Rock",
     size: "40 × 30 cm",
     price: "€ 39,00",
@@ -42,6 +53,8 @@ export const demoProducts: DemoProduct[] = [
   },
   {
     name: "PS5 Player One",
+    description: "Un dettaglio decorativo dedicato al mondo PlayStation, per dare un tocco personale alla postazione gaming.",
+    referenceCode: "PL-004",
     path: "Gaming · PlayStation · PS5",
     size: "30 × 20 cm",
     price: "€ 35,00",

@@ -19,13 +19,14 @@ export function CategoryDialog({
 }: {
   ref?: Ref<CategoryDialogHandle>;
   cats: Cat[];
-  onAdd: (cat: NewCat) => void;
+  onAdd: (cat: NewCat) => void | Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState("");
   const [parent, setParent] = useState("");
   const [active, setActive] = useState(true);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const tops = cats.filter((c) => c.parentId === null);
   const { t } = useLocale();
 
@@ -39,7 +40,7 @@ export function CategoryDialog({
     },
   }));
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     const parentId = parent ? Number(parent) : null;
     const result = validateNewCategory(cats, name, parentId);
@@ -50,8 +51,19 @@ export function CategoryDialog({
           : "admin.dialog.duplicate";
       return setError(t(key));
     }
-    onAdd({ name: result.name, parentId, active });
-    dialog.current?.close();
+    setSaving(true);
+    try {
+      await onAdd({ name: result.name, parentId, active });
+      dialog.current?.close();
+    } catch (cause) {
+      setError(
+        cause instanceof Error && cause.message === "category_exists"
+          ? t("admin.dialog.duplicate")
+          : t("admin.categories.saveFailed"),
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function categoryName(name: string) {
@@ -80,11 +92,12 @@ export function CategoryDialog({
             placeholder={t("admin.dialog.namePlaceholder")}
             autoFocus
             aria-invalid={Boolean(error)}
+            disabled={saving}
           />
         </label>
         <label>
           {t("admin.dialog.insertWhere")}
-          <select value={parent} onChange={(e) => setParent(e.target.value)}>
+          <select value={parent} onChange={(e) => setParent(e.target.value)} disabled={saving}>
             <option value="">{t("admin.dialog.root")}</option>
             {tops.map((top) => (
               <option key={top.id} value={top.id}>
@@ -98,6 +111,7 @@ export function CategoryDialog({
             type="checkbox"
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
+            disabled={saving}
           />
           <span>{t("admin.dialog.visible")}</span>
         </label>
@@ -111,11 +125,12 @@ export function CategoryDialog({
             type="button"
             className="btn btn-line"
             onClick={() => dialog.current?.close()}
+            disabled={saving}
           >
             {t("admin.dialog.cancel")}
           </button>
-          <button type="submit" className="btn btn-dark">
-            {t("admin.dialog.add")}
+          <button type="submit" className="btn btn-dark" disabled={saving}>
+            {t(saving ? "admin.form.saving" : "admin.dialog.add")}
           </button>
         </div>
       </form>

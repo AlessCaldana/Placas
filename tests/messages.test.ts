@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { locales, translations, translate } from "@/messages";
 
 describe("interface translations", () => {
-  it("provides the same interface keys in all four locales", () => {
+  it("provides the same interface keys in every locale", () => {
     const italianKeys = Object.keys(translations.it).sort();
     for (const locale of locales) {
       expect(Object.keys(translations[locale]).sort()).toEqual(italianKeys);

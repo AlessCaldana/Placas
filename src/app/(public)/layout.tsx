@@ -3,18 +3,27 @@ import { PublicHeader } from "@/components/public/PublicHeader";
 import { Footer } from "@/components/public/Footer";
 import { getRequestLocale } from "@/lib/locale";
 import { translate } from "@/messages";
+import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
+
+export const dynamic = "force-dynamic";
 
 export default async function PublicLayout({ children }: { children: ReactNode }) {
   const locale = await getRequestLocale();
+  let settings = defaultSiteSettings();
+  try {
+    settings = await getSiteSettings();
+  } catch {
+    // Keep the public site available if settings cannot be read.
+  }
 
   return (
     <>
       <a className="skip-link" href="#main">
         {translate(locale, "footer.skip")}
       </a>
-      <PublicHeader />
+      <PublicHeader settings={settings} />
       <main id="main">{children}</main>
-      <Footer />
+      <Footer settings={settings} />
     </>
   );
 }

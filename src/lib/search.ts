@@ -13,8 +13,11 @@ const categoryTerms: Record<string, string[]> = {
     "macchine",
     "automobile",
     "automobili",
+    "auto's",
+    "wagen",
+    "wagens",
   ],
-  camion: ["camion", "camión", "camions", "truck", "trucks", "lorry", "camioneta"],
+  camion: ["camion", "camión", "camions", "truck", "trucks", "lorry", "camioneta", "vrachtwagen", "vrachtwagens"],
   moto: [
     "moto",
     "motorcycle",
@@ -25,10 +28,13 @@ const categoryTerms: Record<string, string[]> = {
     "motocicletas",
     "moto",
     "motos",
+    "motor",
+    "motoren",
+    "motorfiets",
   ],
-  cucina: ["cucina", "cuisine", "cooking", "kitchen", "cocina"],
-  viaggi: ["viaggi", "viaggio", "travel", "trip", "voyage", "voyages", "viaje", "viajes"],
-  musica: ["musica", "music", "musique", "música"],
+  cucina: ["cucina", "cuisine", "cooking", "kitchen", "cocina", "keuken", "koken"],
+  viaggi: ["viaggi", "viaggio", "travel", "trip", "voyage", "voyages", "viaje", "viajes", "reizen", "reis"],
+  musica: ["musica", "music", "musique", "música", "muziek"],
   gaming: [
     "gaming",
     "videogame",
@@ -39,8 +45,10 @@ const categoryTerms: Record<string, string[]> = {
     "jeux vidéo",
     "videojuego",
     "videojuegos",
+    "videospel",
+    "videospellen",
   ],
-  decorazione: ["decorazione", "decor", "decoration", "décoration", "decoración", "deco"],
+  decorazione: ["decorazione", "decor", "decoration", "décoration", "decoración", "deco", "decoratie", "versiering"],
 };
 
 export function normalizeSearchText(value: string): string {

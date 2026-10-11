@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rejectWithoutAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   bufferRequestWithinProductImageLimit,
@@ -19,6 +20,8 @@ function isAdminApiEnabled(): boolean {
 }
 
 export async function PUT(request: Request, { params }: RouteContext) {
+  const denied = rejectWithoutAdminSession(request);
+  if (denied) return denied;
   if (!isAdminApiEnabled()) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }

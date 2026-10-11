@@ -16,6 +16,14 @@ const languageNames: Record<Locale, string> = {
   fr: "Français",
   es: "Español",
   en: "English",
+  nl: "Nederlands",
+};
+const languageFlags: Record<Locale, string> = {
+  it: "🇮🇹",
+  fr: "🇫🇷",
+  es: "🇪🇸",
+  en: "🇬🇧",
+  nl: "🇳🇱",
 };
 
 export function LocaleProvider({
@@ -65,10 +73,12 @@ export function LocaleProvider({
             aria-labelledby="locale-prompt-title"
           >
             <span className="eyebrow">PLACA</span>
-            <h1 id="locale-prompt-title">{translate(locale, "language.prompt")}</h1>
+            <h1 id="locale-prompt-title">{translate(locale, "language.choose")}</h1>
+            <p>{translate(locale, "language.prompt")}</p>
             <div className="locale-options">
               {locales.map((option) => (
                 <button key={option} type="button" onClick={() => setLocale(option)}>
+                  <span aria-hidden="true">{languageFlags[option]}</span>
                   {languageNames[option]}
                 </button>
               ))}

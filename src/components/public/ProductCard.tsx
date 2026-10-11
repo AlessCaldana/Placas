@@ -1,13 +1,16 @@
-import type { DemoProduct } from "@/lib/demo-data";
+import type { PublicCatalogProduct } from "@/lib/services/products";
 import { categoryMessageKey, translate, type Locale } from "@/messages";
 
 export function ProductCard({
   product,
   locale,
+  onSelect,
 }: {
-  product: DemoProduct;
+  product: PublicCatalogProduct;
   locale: Locale;
+  onSelect: () => void;
 }) {
+  const unavailable = !product.available;
   const path = product.path
     .split(" · ")
     .map((part) => {
@@ -17,14 +20,17 @@ export function ProductCard({
     .join(" · ");
 
   return (
-    <article className="product-card">
+    <button className="product-card" type="button" onClick={onSelect} aria-label={`${product.name} — ${product.price}`}>
       <div
-        className={`product-image tone-${product.tone}`}
+        className={`product-image tone-${product.tone}${product.imageUrl ? " has-image" : ""}`}
         data-initial={product.name.charAt(0)}
-        role="img"
-        aria-label={translate(locale, "featured.preview").replace("{name}", product.name)}
+        role={product.imageUrl ? undefined : "img"}
+        aria-label={product.imageUrl ? undefined : translate(locale, "featured.preview").replace("{name}", product.name)}
       >
-        <span>{translate(locale, "featured.available")}</span>
+        {product.imageUrl && <img className="product-photo" src={product.imageUrl} alt={product.name} />}
+        <span className={`product-status ${unavailable ? "is-unavailable" : "is-available"}`}>
+          {translate(locale, unavailable ? "featured.unavailable" : "featured.available")}
+        </span>
       </div>
       <div className="product-copy">
         <small>{path}</small>
@@ -34,6 +40,6 @@ export function ProductCard({
           <span>{product.size}</span>
         </p>
       </div>
-    </article>
+    </button>
   );
 }
