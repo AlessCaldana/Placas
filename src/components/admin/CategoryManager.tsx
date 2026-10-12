@@ -247,12 +247,16 @@ export function CategoryManager({
               </div>
               <Switch cat={top} />
             </div>
-            {children.map((child) => (
-              <div className={child.active ? "tree-child" : "tree-child off"} key={child.id}>
-                <b>{categoryName(child.name)}</b>
-                <Switch cat={child} />
+            {children.length > 0 && (
+              <div className="tree-children">
+                {children.map((child) => (
+                  <div className={child.active ? "tree-child" : "tree-child off"} key={child.id}>
+                    <b>{categoryName(child.name)}</b>
+                    <Switch cat={child} />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
             <button
               type="button"
               className="tree-add"

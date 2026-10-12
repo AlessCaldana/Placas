@@ -55,6 +55,5 @@ export const it = {
     text: "Targhe decorative per raccontare le tue passioni.",
     explore: "Esplora",
     contacts: "Contatti",
-    demoNote: "Anteprima del design: i contenuti sono dimostrativi.",
   },
 } as const;

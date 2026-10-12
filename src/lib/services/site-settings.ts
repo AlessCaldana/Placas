@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { getDb, isDatabaseConfigured } from "@/lib/db";
 import { site } from "@/lib/site";
 import type { ShippingRates } from "@/lib/payments/shipping";
+import { emptySiteLegalInfo, type SiteLegalInfo } from "@/lib/validators/site-legal";
 
 export type SiteSettings = {
   name: string;
@@ -12,6 +13,8 @@ export type SiteSettings = {
   phone: string;
   whatsappNumber: string;
   shippingRates: ShippingRates;
+  /** Seller legal data for the footer; "" = not set. */
+  legal: SiteLegalInfo;
 };
 
 const noShipping: ShippingRates = { IT: null, EU: null, WORLD: null };
@@ -24,6 +27,7 @@ export function defaultSiteSettings(): SiteSettings {
     phone: "",
     whatsappNumber: site.whatsappNumber,
     shippingRates: noShipping,
+    legal: emptySiteLegalInfo(),
   };
 }
 
@@ -36,6 +40,12 @@ const settingsSelect = {
   shippingItalyCents: true,
   shippingEuCents: true,
   shippingWorldCents: true,
+  legalName: true,
+  vatNumber: true,
+  taxCode: true,
+  legalAddress: true,
+  pecEmail: true,
+  reaNumber: true,
 } as const;
 
 function toShippingRates(row: {
@@ -44,6 +54,28 @@ function toShippingRates(row: {
   shippingWorldCents: number | null;
 }): ShippingRates {
   return { IT: row.shippingItalyCents, EU: row.shippingEuCents, WORLD: row.shippingWorldCents };
+}
+
+function toLegalInfo(row: { [K in keyof SiteLegalInfo]: string | null }): SiteLegalInfo {
+  return {
+    legalName: row.legalName ?? "",
+    vatNumber: row.vatNumber ?? "",
+    taxCode: row.taxCode ?? "",
+    legalAddress: row.legalAddress ?? "",
+    pecEmail: row.pecEmail ?? "",
+    reaNumber: row.reaNumber ?? "",
+  };
+}
+
+function toLegalColumns(legal: SiteLegalInfo): { [K in keyof SiteLegalInfo]: string | null } {
+  return {
+    legalName: legal.legalName || null,
+    vatNumber: legal.vatNumber || null,
+    taxCode: legal.taxCode || null,
+    legalAddress: legal.legalAddress || null,
+    pecEmail: legal.pecEmail || null,
+    reaNumber: legal.reaNumber || null,
+  };
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
@@ -60,13 +92,15 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     phone: settings.phone ?? "",
     whatsappNumber: settings.whatsappNumber ?? site.whatsappNumber,
     shippingRates: toShippingRates(settings),
+    legal: toLegalInfo(settings),
   };
 }
 
 export async function saveSiteSettings(settings: SiteSettings): Promise<SiteSettings> {
-  const { shippingRates, ...fields } = settings;
+  const { shippingRates, legal, ...fields } = settings;
   const data = {
     ...fields,
+    ...toLegalColumns(legal),
     shippingItalyCents: shippingRates.IT,
     shippingEuCents: shippingRates.EU,
     shippingWorldCents: shippingRates.WORLD,
@@ -84,6 +118,7 @@ export async function saveSiteSettings(settings: SiteSettings): Promise<SiteSett
     phone: saved.phone ?? "",
     whatsappNumber: saved.whatsappNumber ?? "",
     shippingRates: toShippingRates(saved),
+    legal: toLegalInfo(saved),
   };
 }
 

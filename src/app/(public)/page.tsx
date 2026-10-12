@@ -4,9 +4,21 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { isStripeConfigured } from "@/lib/payments/stripe";
 import { listPublicCategories } from "@/lib/services/categories";
 import { listPublicProducts, type PublicCatalogProduct } from "@/lib/services/products";
+import { listPublishedReviews, type PublicReview } from "@/lib/services/reviews";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 
+async function loadPublishedReviews(): Promise<PublicReview[]> {
+  if (!isDatabaseConfigured()) return [];
+  try {
+    return await listPublishedReviews(6);
+  } catch {
+    // Reviews are optional: the home page stays available without them.
+    return [];
+  }
+}
+
 export default async function Home() {
+  const reviewsPromise = loadPublishedReviews();
   let settings = defaultSiteSettings();
   try {
     settings = await getSiteSettings();
@@ -20,7 +32,13 @@ export default async function Home() {
     if (catalog) {
       const [categories, products] = catalog;
       return (
-        <HomePage categories={categories} products={products} settings={settings} paymentsEnabled={isStripeConfigured()} />
+        <HomePage
+          categories={categories}
+          products={products}
+          settings={settings}
+          paymentsEnabled={isStripeConfigured()}
+          reviews={await reviewsPromise}
+        />
       );
     }
   }
@@ -41,5 +59,5 @@ export default async function Home() {
       quantity: product.quantity ?? null,
     };
   });
-  return <HomePage categories={categories} products={products} settings={settings} />;
+  return <HomePage categories={categories} products={products} settings={settings} reviews={await reviewsPromise} />;
 }

@@ -27,6 +27,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+}
+
 enum ProductOptionType {
   SIZE
   PRICE
@@ -130,17 +136,25 @@ model ProductOption {
 }
 
 model SiteSetting {
-  id            String   @id @default("default") @db.VarChar(32)
-  name          String   @db.VarChar(120)
-  logoUrl       String?  @db.VarChar(500)
-  email         String?  @db.VarChar(254)
-  phone         String?  @db.VarChar(32)
-  whatsappNumber String? @db.VarChar(20)
+  id                 String   @id @default("default") @db.VarChar(32)
+  name               String   @db.VarChar(120)
+  logoUrl            String?  @db.VarChar(500)
+  email              String?  @db.VarChar(254)
+  phone              String?  @db.VarChar(32)
+  whatsappNumber     String?  @db.VarChar(20)
   // Shipping price per zone in euro cents. NULL = no shipping to that zone.
   shippingItalyCents Int?
   shippingEuCents    Int?
   shippingWorldCents Int?
-  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  // Seller legal data shown in the footer (D.Lgs. 70/2003 art. 7). All optional.
+  legalName          String?  @db.VarChar(160)
+  // Italian Partita IVA stored as 11 digits; other EU VAT numbers keep their prefix.
+  vatNumber          String?  @db.VarChar(20)
+  taxCode            String?  @db.VarChar(20)
+  legalAddress       String?  @db.VarChar(255)
+  pecEmail           String?  @db.VarChar(254)
+  reaNumber          String?  @db.VarChar(40)
+  updatedAt          DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("site_settings")
 }
@@ -148,6 +162,8 @@ model SiteSetting {
 // Online orders paid with Stripe Checkout. Amounts are euro cents.
 model Order {
   id                  String      @id @default(uuid()) @db.Uuid
+  // Public reference given to the buyer ("PL-" + 6 unambiguous characters).
+  orderNumber         String?     @unique @db.VarChar(16)
   status              OrderStatus @default(PENDING)
   stripeSessionId     String?     @unique @db.VarChar(255)
   stripePaymentIntent String?     @db.VarChar(255)
@@ -160,14 +176,26 @@ model Order {
   totalCents          Int
   customerEmail       String?     @db.VarChar(254)
   customerName        String?     @db.VarChar(200)
+  // E.164 phone collected by Stripe Checkout (used for the WhatsApp shipping notice).
+  customerPhone       String?     @db.VarChar(32)
+  // App locale at checkout (it/fr/es/en/nl), to message the buyer in their language.
+  locale              String?     @db.VarChar(5)
   shippingAddress     Json?
   reviewReason        String?     @db.VarChar(200)
+  // Shipment set by PFdeco. trackingUrl is only stored for the "other" carrier;
+  // known carriers get their tracking link built from the code.
+  carrier             String?     @db.VarChar(32)
+  trackingNumber      String?     @db.VarChar(64)
+  trackingUrl         String?     @db.VarChar(500)
+  shippedAt           DateTime?   @db.Timestamptz(6)
   items               OrderItem[]
+  review              Review?
   paidAt              DateTime?   @db.Timestamptz(6)
   createdAt           DateTime    @default(now()) @db.Timestamptz(6)
   updatedAt           DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@index([status, createdAt])
+  @@index([shippedAt])
   @@map("orders")
 }
 
@@ -185,4 +213,23 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+// Buyer review, one per paid order. Shown publicly only after PFdeco approves it.
+// Rating (1-5) and comment length (max 1000) are validated in code.
+model Review {
+  id         String       @id @default(uuid()) @db.Uuid
+  orderId    String       @unique @db.Uuid
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  firstName  String       @db.VarChar(60)
+  lastName   String       @db.VarChar(60)
+  rating     Int
+  comment    String       @db.Text
+  status     ReviewStatus @default(PENDING)
+  approvedAt DateTime?    @db.Timestamptz(6)
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([status, createdAt])
+  @@map("reviews")
 }

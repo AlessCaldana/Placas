@@ -4,10 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ADMIN_SESSION_COOKIE, isAdminAuthRequired, isValidAdminSession } from "@/lib/admin-auth";
+import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 import "./admin.css";
 
 export const metadata: Metadata = {
-  title: "PLACA — Gestione",
+  title: { absolute: "PFdeco — Gestione" },
   robots: { index: false, follow: false },
 };
 
@@ -19,5 +20,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (isAdminAuthRequired() && !isValidAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value)) {
     redirect("/login");
   }
-  return <AdminShell showLogout={isAdminAuthRequired()}>{children}</AdminShell>;
+  const shopName = await getSiteSettings()
+    .then((settings) => settings.name)
+    .catch(() => defaultSiteSettings().name);
+  return <AdminShell showLogout={isAdminAuthRequired()} shopName={shopName}>{children}</AdminShell>;
 }

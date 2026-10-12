@@ -6,10 +6,12 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import { ProductCard } from "@/components/public/ProductCard";
 import { ProductDetailsDialog } from "@/components/public/ProductDetailsDialog";
+import { ReviewsSection } from "@/components/public/ReviewsSection";
 import { ShoppingCart, type CartItem } from "@/components/public/ShoppingCart";
 import { SearchBar } from "@/components/public/SearchBar";
 import type { PublicCatalogCategory } from "@/lib/services/categories";
 import type { PublicCatalogProduct } from "@/lib/services/products";
+import type { PublicReview } from "@/lib/services/reviews";
 import { whatsappLink } from "@/lib/site";
 import { categoryMessageKey, translate } from "@/messages";
 import { matchesMultilingualSearch } from "@/lib/search";
@@ -22,11 +24,13 @@ export function HomePage({
   products,
   settings,
   paymentsEnabled = false,
+  reviews = [],
 }: {
   categories: PublicCatalogCategory[];
   products: PublicCatalogProduct[];
   settings: SiteSettings;
   paymentsEnabled?: boolean;
+  reviews?: PublicReview[];
 }) {
   const { locale } = useLocale();
   const [query, setQuery] = useState("");
@@ -185,6 +189,8 @@ export function HomePage({
           </div>)}
         </div>
       </section>
+
+      <ReviewsSection reviews={reviews} locale={locale} />
 
       <section className="cta" id="contatti">
         <div><div className="eyebrow light"><span /> {t("contact.eyebrow")}</div>

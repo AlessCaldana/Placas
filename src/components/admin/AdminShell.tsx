@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { BrandSeal } from "@/components/ui/BrandSeal";
 import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
 import { useLocale } from "@/components/ui/LocaleProvider";
 
@@ -12,12 +13,13 @@ const items: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/prodotti", label: "admin.nav.products", icon: "box" },
   { href: "/admin/categorie", label: "admin.nav.categories", icon: "category" },
   { href: "/admin/vendite", label: "admin.nav.sales", icon: "bag" },
+  { href: "/admin/recensioni", label: "admin.nav.reviews", icon: "chat" },
   { href: "/admin/statistiche", label: "admin.nav.stats", icon: "bar" },
-  { href: "/admin/richieste", label: "admin.nav.requests", icon: "inbox" },
+  { href: "/admin/spedizioni", label: "admin.nav.shipments", icon: "truck" },
   { href: "/admin/impostazioni", label: "admin.nav.settings", icon: "settings" },
 ];
 
-export function AdminShell({ children, showLogout }: { children: ReactNode; showLogout: boolean }) {
+export function AdminShell({ children, showLogout, shopName }: { children: ReactNode; showLogout: boolean; shopName: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -37,7 +39,7 @@ export function AdminShell({ children, showLogout }: { children: ReactNode; show
           className="brand admin-brand"
           aria-label={t("brand.admin")}
         >
-          <span>PL</span>PLACA<small>GESTIONE</small>
+          <BrandSeal size={44} />{shopName}<small>GESTIONE</small>
         </Link>
         <nav aria-label={t("admin.menu")}>
           <small>{t("admin.menu")}</small>
@@ -87,7 +89,7 @@ export function AdminShell({ children, showLogout }: { children: ReactNode; show
           >
             <Icon name={open ? "x" : "menu"} />
           </button>
-          <b>PLACA</b>
+          <b>{shopName}</b>
         </div>
         <main className="admin-main">{children}</main>
       </div>

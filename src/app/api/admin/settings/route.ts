@@ -10,6 +10,7 @@ import {
   validateLogoFile,
 } from "@/lib/services/site-settings";
 import type { ShippingRates, ShippingZone } from "@/lib/payments/shipping";
+import { parseSiteLegalInput, siteLegalFields } from "@/lib/validators/site-legal";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,13 @@ export async function PUT(request: Request) {
   if (file && !validateLogoFile(file)) {
     return NextResponse.json({ error: "invalid_logo" }, { status: 400 });
   }
+  // Legal fields missing from the form (older clients) keep their stored value.
+  const legalInput = parseSiteLegalInput(
+    Object.fromEntries(siteLegalFields.map((field) => [field, form.get(field)])),
+  );
+  if (!legalInput.ok) {
+    return NextResponse.json({ error: "invalid_legal", field: legalInput.field }, { status: 400 });
+  }
 
   let uploadedLogo: string | null = null;
   try {
@@ -90,6 +98,7 @@ export async function PUT(request: Request) {
       phone,
       whatsappNumber,
       shippingRates: shippingRates as ShippingRates,
+      legal: { ...previous.legal, ...legalInput.value },
     });
     if (uploadedLogo || removeLogo) await deleteSiteLogo(previous.logoUrl).catch(() => undefined);
     return NextResponse.json(saved);

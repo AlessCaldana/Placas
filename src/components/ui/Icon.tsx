@@ -19,7 +19,10 @@ export type IconName =
   | "globe"
   | "eye"
   | "lock"
-  | "card";
+  | "card"
+  | "check"
+  | "truck"
+  | "copy";
 
 const paths: Record<IconName, ReactNode> = {
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
@@ -76,6 +79,20 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  truck: (
+    <>
+      <path d="M14 17V6H3v11h2M9 17h6M19 17h2v-4.5L18 9h-4" />
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="17" cy="17" r="2" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+    </>
+  ),
   upload: <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />,
   globe: (
     <>

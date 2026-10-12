@@ -1,14 +1,6 @@
-import { ComingSoon } from "@/components/admin/AdminHeader";
-import { getRequestLocale } from "@/lib/locale";
-import { translate } from "@/messages";
+import { redirect } from "next/navigation";
 
-export default async function Page() {
-  const locale = await getRequestLocale();
-  return (
-    <ComingSoon
-      title={translate(locale, "admin.requests.title")}
-      subtitle={translate(locale, "admin.requests.subtitle")}
-      note={translate(locale, "admin.requests.note")}
-    />
-  );
+// "Richieste" was replaced by "Spedizioni"; old links and bookmarks keep working.
+export default function Page() {
+  redirect("/admin/spedizioni");
 }

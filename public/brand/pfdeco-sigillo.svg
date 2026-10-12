@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="960" height="960">
+  <title>PFdeco · Decorative Italiane</title>
+  <defs><path id="ring" d="M120,120 m-86,0 a86,86 0 1,1 172,0 a86,86 0 1,1 -172,0"/></defs>
+  <circle cx="120" cy="120" r="114" fill="#2f6f6a"/>
+  <circle cx="120" cy="120" r="106" fill="none" stroke="#d9a23a" stroke-width="2"/>
+  <circle cx="120" cy="120" r="68" fill="#f3ead7"/>
+  <circle cx="120" cy="120" r="62" fill="none" stroke="#d9a23a" stroke-width="1.5"/>
+  <text font-family="'DM Sans', Helvetica, Arial, sans-serif" font-weight="700" font-size="17" letter-spacing="5" fill="#f3ead7"><textPath href="#ring">PFDECO · DECORATIVE ITALIANE ·</textPath></text>
+  <text x="120" y="139" text-anchor="middle" font-family="'Instrument Serif', Georgia, serif" font-size="62" fill="#2b2a26">PF</text>
+  <rect x="99" y="150" width="14" height="4" fill="#2f6f6a"/><rect x="113" y="150" width="14" height="4" fill="#fffdf7"/><rect x="127" y="150" width="14" height="4" fill="#c4602f"/>
+  <g fill="#d9a23a"><circle cx="120" cy="84" r="2.5"/><circle cx="108" cy="87" r="1.8"/><circle cx="132" cy="87" r="1.8"/></g>
+</svg>

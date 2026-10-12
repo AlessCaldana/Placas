@@ -87,4 +87,13 @@ describe("login rate limit", () => {
     expect(loginRetryAfterSeconds(key, start + 15 * 60 * 1000)).toBe(0);
     clearFailedLogins(key);
   });
+
+  it("blocks every client after 30 failures in total", () => {
+    const start = 50_000_000;
+    for (let attempt = 0; attempt < 29; attempt += 1) registerFailedLogin(`198.51.100.${attempt}`, start);
+    expect(loginRetryAfterSeconds("192.0.2.1", start)).toBe(0);
+    registerFailedLogin("198.51.100.200", start);
+    expect(loginRetryAfterSeconds("192.0.2.1", start + 60_000)).toBe(14 * 60);
+    expect(loginRetryAfterSeconds("192.0.2.1", start + 15 * 60 * 1000)).toBe(0);
+  });
 });

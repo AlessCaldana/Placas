@@ -20,14 +20,14 @@ describe("parseProductOptionPreferences", () => {
       ),
     ).toEqual({
       sizes: [...defaultProductSizes, "50 × 70 cm"],
-      prices: [5, 7.5],
+      prices: [...defaultProductPrices, 7.5],
     });
   });
 
   it("ignores invalid and duplicate custom values", () => {
     expect(
       parseProductOptionPreferences(
-        JSON.stringify({ sizes: ["30 × 40 cm", " ", 12], prices: [-1, "oops", 5] }),
+        JSON.stringify({ sizes: ["20 x 30 cm", " ", 12], prices: [-1, "oops", 5, 10] }),
       ),
     ).toEqual({ sizes: defaultProductSizes, prices: defaultProductPrices });
   });

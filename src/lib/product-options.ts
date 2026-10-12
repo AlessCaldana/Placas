@@ -1,6 +1,7 @@
-export const productOptionsStorageKey = "placa_product_options_v1";
-export const defaultProductSizes = ["30 × 40 cm", "45 × 30 cm"];
-export const defaultProductPrices = [5];
+// v2: the official sizes and prices replace the test options saved in browsers under v1.
+export const productOptionsStorageKey = "placa_product_options_v2";
+export const defaultProductSizes = ["20 x 30 cm", "15 x 30 cm", "35 x 35 cm"];
+export const defaultProductPrices = [5, 10];
 const maxProductDimensionCm = 200;
 
 export function normalizeProductSize(value: string): string | null {

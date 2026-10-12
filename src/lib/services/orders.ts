@@ -1,9 +1,12 @@
 import type Stripe from "stripe";
+import { Prisma } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
+import { generateOrderNumber } from "@/lib/order-number";
 import { calculateCheckoutPricing } from "@/lib/payments/checkout-pricing";
 import { shippingCostFor, type ShippingCountry } from "@/lib/payments/shipping";
 import { getConnectedAccountId, getStripe } from "@/lib/payments/stripe";
 import { getSiteSettings } from "@/lib/services/site-settings";
+import { parseE164Phone } from "@/lib/validators/phone";
 import { translate, type Locale } from "@/messages";
 
 export type CheckoutItemInput = { productId: string; quantity: number };
@@ -25,6 +28,8 @@ const MAX_QUANTITY = 99;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Stripe requires at least 30 minutes; the order is released when the session expires.
 const SESSION_LIFETIME_SECONDS = 30 * 60;
+// A random 6-character number rarely collides; retry a few times if it does.
+const ORDER_NUMBER_ATTEMPTS = 5;
 
 export function parseCheckoutItems(value: unknown): CheckoutItemInput[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > MAX_LINES) return null;
@@ -40,6 +45,19 @@ export function parseCheckoutItems(value: unknown): CheckoutItemInput[] | null {
     items.push({ productId, quantity: quantity as number });
   }
   return items;
+}
+
+/** Runs `create` with a fresh order number, retrying when it hits the unique constraint. */
+async function createWithOrderNumber<T>(create: (orderNumber: string) => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await create(generateOrderNumber());
+    } catch (error) {
+      const collided =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+      if (!collided || attempt >= ORDER_NUMBER_ATTEMPTS) throw error;
+    }
+  }
 }
 
 function priceToCents(price: { toFixed: (digits: number) => string }): number {
@@ -83,33 +101,35 @@ export async function startCheckout(
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
   const pricing = calculateCheckoutPricing(productsCents + shippingCents, itemCount);
 
-  const order = await db.order.create({
-    data: {
-      country,
-      itemCount,
-      productsCents,
-      shippingCents,
-      platformFeeCents: pricing.platformFee,
-      applicationFeeCents: pricing.applicationFeeAmount,
-      totalCents: pricing.total,
-      items: {
-        create: lines.map((line) => ({
-          productId: line.product.id,
-          referenceCode: line.product.referenceCode,
-          name: line.product.name,
-          unitPriceCents: line.unitPriceCents,
-          quantity: line.quantity,
-        })),
-      },
+  const orderData = {
+    country,
+    locale,
+    itemCount,
+    productsCents,
+    shippingCents,
+    platformFeeCents: pricing.platformFee,
+    applicationFeeCents: pricing.applicationFeeAmount,
+    totalCents: pricing.total,
+    items: {
+      create: lines.map((line) => ({
+        productId: line.product.id,
+        referenceCode: line.product.referenceCode,
+        name: line.product.name,
+        unitPriceCents: line.unitPriceCents,
+        quantity: line.quantity,
+      })),
     },
-    select: { id: true },
-  });
+  };
+  const order = await createWithOrderNumber((orderNumber) =>
+    db.order.create({ data: { ...orderData, orderNumber }, select: { id: true, orderNumber: true } }),
+  );
+  const metadata = { orderId: order.id, orderNumber: order.orderNumber ?? "" };
 
   try {
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       client_reference_id: order.id,
-      metadata: { orderId: order.id },
+      metadata,
       locale,
       expires_at: Math.floor(Date.now() / 1000) + SESSION_LIFETIME_SECONDS,
       line_items: lines.map((line) => ({
@@ -121,6 +141,8 @@ export async function startCheckout(
         },
       })),
       shipping_address_collection: { allowed_countries: [country] },
+      // Used by PFdeco to send the tracking code on WhatsApp.
+      phone_number_collection: { enabled: true },
       // The buyer sees products at their real price; shipping and the service
       // and payment costs are shown together as one "shipping and handling" line.
       shipping_options: [
@@ -135,7 +157,7 @@ export async function startCheckout(
       payment_intent_data: {
         application_fee_amount: pricing.applicationFeeAmount,
         transfer_data: { destination: getConnectedAccountId() },
-        metadata: { orderId: order.id },
+        metadata,
       },
       success_url: `${siteUrl}/ordine/completato?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/?checkout=annullato`,
@@ -174,6 +196,7 @@ export async function fulfillPaidSession(session: Stripe.Checkout.Session): Prom
         stripePaymentIntent: paymentIntent ?? null,
         customerEmail: session.customer_details?.email?.slice(0, 254) ?? null,
         customerName: (shipping?.name ?? session.customer_details?.name)?.slice(0, 200) ?? null,
+        customerPhone: parseE164Phone(session.customer_details?.phone),
         shippingAddress: shipping?.address ? { ...shipping.address } : undefined,
       },
     });
@@ -233,7 +256,7 @@ export type AdminOrder = {
   reviewReason: string | null;
 };
 
-function formatAddress(value: unknown): string {
+export function formatAddress(value: unknown): string {
   if (!value || typeof value !== "object") return "";
   const address = value as Record<string, unknown>;
   const part = (key: string) => (typeof address[key] === "string" ? (address[key] as string) : "");

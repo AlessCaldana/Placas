@@ -1,39 +1,32 @@
-// In-memory limiter for admin login attempts. It lives in the server process,
-// so it resets on restart and is per instance; enough for a single server.
-const MAX_FAILED_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000;
+import { clientKey, createRateLimiter } from "@/lib/rate-limit";
 
-type AttemptRecord = { failures: number; windowStart: number };
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const GLOBAL_KEY = "global";
 
-const attempts = new Map<string, AttemptRecord>();
-
-function currentRecord(key: string, now: number): AttemptRecord | undefined {
-  const record = attempts.get(key);
-  if (record && now - record.windowStart >= WINDOW_MS) {
-    attempts.delete(key);
-    return undefined;
-  }
-  return record;
-}
+// In-memory limiters for admin login attempts: 5 failures per client and
+// 30 failures in total per 15 minutes, so a distributed brute force that
+// rotates addresses is also slowed down.
+const loginLimiter = createRateLimiter({ max: 5, windowMs: LOGIN_WINDOW_MS });
+const globalLoginLimiter = createRateLimiter({ max: 30, windowMs: LOGIN_WINDOW_MS });
 
 /** Seconds until the key may try again, or 0 when it is not blocked. */
 export function loginRetryAfterSeconds(key: string, now = Date.now()): number {
-  const record = currentRecord(key, now);
-  if (!record || record.failures < MAX_FAILED_ATTEMPTS) return 0;
-  return Math.ceil((record.windowStart + WINDOW_MS - now) / 1000);
+  return Math.max(
+    loginLimiter.retryAfterSeconds(key, now),
+    globalLoginLimiter.retryAfterSeconds(GLOBAL_KEY, now),
+  );
 }
 
 export function registerFailedLogin(key: string, now = Date.now()): void {
-  const record = currentRecord(key, now);
-  if (record) record.failures += 1;
-  else attempts.set(key, { failures: 1, windowStart: now });
+  loginLimiter.register(key, now);
+  globalLoginLimiter.register(GLOBAL_KEY, now);
 }
 
+/** Forgets the failures of the key. The global count expires with its window. */
 export function clearFailedLogins(key: string): void {
-  attempts.delete(key);
+  loginLimiter.clear(key);
 }
 
 export function loginClientKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("x-real-ip") || "unknown";
+  return clientKey(request);
 }
