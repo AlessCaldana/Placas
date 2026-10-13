@@ -181,6 +181,13 @@ model Order {
   // App locale at checkout (it/fr/es/en/nl), to message the buyer in their language.
   locale              String?     @db.VarChar(5)
   shippingAddress     Json?
+  // Company billing details collected by Stripe Checkout ("buying as a business").
+  // PFdeco issues the invoice with its own software; the site only stores and shows them.
+  invoiceRequested    Boolean     @default(false)
+  billingBusinessName String?     @db.VarChar(200)
+  billingTaxIdType    String?     @db.VarChar(16)
+  billingTaxId        String?     @db.VarChar(64)
+  billingAddress      Json?
   reviewReason        String?     @db.VarChar(200)
   // Shipment set by PFdeco. trackingUrl is only stored for the "other" carrier;
   // known carriers get their tracking link built from the code.

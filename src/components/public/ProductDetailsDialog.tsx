@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Icon } from "@/components/ui/Icon";
 import type { PublicCatalogProduct } from "@/lib/services/products";
 import { translate, type Locale } from "@/messages";
 
@@ -10,15 +11,23 @@ export function ProductDetailsDialog({
   quantityInCart,
   onClose,
   onAddToCart,
+  onPrevious,
+  onNext,
+  position,
 }: {
   product: PublicCatalogProduct;
   locale: Locale;
   quantityInCart: number;
   onClose: () => void;
   onAddToCart: () => void;
+  /** Browse the products listed on the page without closing the dialog. */
+  onPrevious?: () => void;
+  onNext?: () => void;
+  position?: { index: number; total: number };
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const ignoreNextCloseEvent = useRef(false);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     if (!product.id) return;
@@ -56,6 +65,7 @@ export function ProductDetailsDialog({
   };
 
   const t = (key: string) => translate(locale, key);
+  const canBrowse = Boolean(onPrevious && onNext && position && position.total > 1);
   const atStockLimit = product.quantity !== null && quantityInCart >= product.quantity;
   const addDisabled = !product.available || atStockLimit;
   const addLabel = !product.available
@@ -63,6 +73,7 @@ export function ProductDetailsDialog({
     : atStockLimit
       ? t("cart.maxReached")
       : t("cart.add");
+  const imageAreaHeight = "min(620px, calc(100vh - 80px))";
   const styles = {
     dialog: {
       position: "fixed" as const,
@@ -86,10 +97,12 @@ export function ProductDetailsDialog({
       gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
       minHeight: 530,
     },
+    // Same height for every product, so the dialog does not jump while browsing.
     image: {
       position: "relative" as const,
       width: "100%",
-      minHeight: 530,
+      height: imageAreaHeight,
+      minHeight: 0,
       display: "grid",
       placeItems: "center",
       overflow: "hidden",
@@ -100,12 +113,43 @@ export function ProductDetailsDialog({
       width: "100%",
       height: "100%",
       minHeight: 0,
-      maxHeight: 650,
+      maxHeight: "none",
       objectFit: "contain" as const,
-      padding: 68,
+      padding: "68px 76px",
       boxSizing: "border-box" as const,
     },
-    copy: { padding: "62px 48px 42px", overflow: "auto" },
+    copy: { padding: "62px 48px 42px", overflow: "auto", maxHeight: imageAreaHeight, boxSizing: "border-box" as const },
+    arrow: {
+      position: "absolute" as const,
+      top: "50%",
+      zIndex: 2,
+      width: 46,
+      height: 46,
+      marginTop: -23,
+      display: "grid",
+      placeItems: "center",
+      padding: 0,
+      border: "1px solid var(--line)",
+      borderRadius: "50%",
+      background: "#fbf7eee6",
+      color: "var(--ink)",
+      boxShadow: "0 6px 18px #2b2a2626",
+      cursor: "pointer",
+    },
+    position: {
+      position: "absolute" as const,
+      bottom: 16,
+      left: "50%",
+      zIndex: 1,
+      transform: "translateX(-50%)",
+      padding: "6px 12px",
+      borderRadius: 999,
+      background: "#2b2a26cc",
+      color: "#fff",
+      font: '700 11px/1 "DM Sans Variable", "DM Sans", system-ui, sans-serif',
+      letterSpacing: ".06em",
+      whiteSpace: "nowrap" as const,
+    },
   } as const;
   const details = [
     [t("product.category"), product.path],
@@ -122,6 +166,16 @@ export function ProductDetailsDialog({
       style={styles.dialog}
       ref={dialogRef}
       aria-labelledby="product-dialog-title"
+      onKeyDown={(event) => {
+        if (!canBrowse) return;
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          onPrevious?.();
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault();
+          onNext?.();
+        }
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) closeDialog();
       }}
@@ -137,7 +191,21 @@ export function ProductDetailsDialog({
         ×
       </button>
       <div className="product-dialog-layout" style={styles.layout}>
-        <div className={`product-dialog-image tone-${product.tone}${product.imageUrl ? " has-image" : ""}`} style={styles.image}>
+        <div
+          className={`product-dialog-image tone-${product.tone}${product.imageUrl ? " has-image" : ""}`}
+          style={styles.image}
+          onTouchStart={(event) => {
+            touchStartX.current = event.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(event) => {
+            const start = touchStartX.current;
+            const end = event.changedTouches[0]?.clientX;
+            touchStartX.current = null;
+            if (!canBrowse || start === null || end === undefined || Math.abs(end - start) < 50) return;
+            if (end < start) onNext?.();
+            else onPrevious?.();
+          }}
+        >
           {product.imageUrl ? (
             <img src={product.imageUrl} alt={product.name} style={styles.photo} />
           ) : (
@@ -146,6 +214,19 @@ export function ProductDetailsDialog({
           <span className={`product-status ${!product.available ? "is-unavailable" : "is-available"}`} style={{ position: "absolute", top: 18, left: 18, zIndex: 1, padding: "8px 12px", borderRadius: 999, background: !product.available ? "#f6e1d5" : "#dcebe7", color: !product.available ? "#a9471c" : "#2f6f6a", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" }}>
             {t(product.available ? "featured.available" : "featured.unavailable")}
           </span>
+          {canBrowse && position && (
+            <>
+              <button className="product-dialog-arrow is-previous" type="button" onClick={onPrevious} aria-label={t("product.previous")} style={{ ...styles.arrow, left: 14 }}>
+                <span style={{ display: "grid", transform: "rotate(180deg)" }}><Icon name="arrow" size={20} /></span>
+              </button>
+              <button className="product-dialog-arrow is-next" type="button" onClick={onNext} aria-label={t("product.next")} style={{ ...styles.arrow, right: 14 }}>
+                <Icon name="arrow" size={20} />
+              </button>
+              <span className="product-dialog-position" aria-live="polite" style={styles.position}>
+                {t("product.position").replace("{n}", String(position.index + 1)).replace("{total}", String(position.total))}
+              </span>
+            </>
+          )}
         </div>
         <div className="product-dialog-copy" style={styles.copy}>
           <small style={{ color: "var(--muted)", fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase" }}>{product.path}</small>

@@ -3,7 +3,7 @@ import { demoCategories, demoProducts } from "@/lib/demo-data";
 import { isDatabaseConfigured } from "@/lib/db";
 import { isStripeConfigured } from "@/lib/payments/stripe";
 import { listPublicCategories } from "@/lib/services/categories";
-import { listPublicProducts, type PublicCatalogProduct } from "@/lib/services/products";
+import { listFeaturedProductIds, listPublicProducts, type PublicCatalogProduct } from "@/lib/services/products";
 import { listPublishedReviews, type PublicReview } from "@/lib/services/reviews";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 
@@ -26,15 +26,16 @@ export default async function Home() {
     // Keep the catalog available if settings cannot be read.
   }
   if (isDatabaseConfigured()) {
-    const catalog = await Promise.all([listPublicCategories(), listPublicProducts()])
+    const catalog = await Promise.all([listPublicCategories(), listPublicProducts(), listFeaturedProductIds()])
       // Keep the public page available while the database is being configured.
       .catch(() => null);
     if (catalog) {
-      const [categories, products] = catalog;
+      const [categories, products, featuredIds] = catalog;
       return (
         <HomePage
           categories={categories}
           products={products}
+          featuredIds={featuredIds}
           settings={settings}
           paymentsEnabled={isStripeConfigured()}
           reviews={await reviewsPromise}

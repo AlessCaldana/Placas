@@ -25,9 +25,12 @@ export function HomePage({
   settings,
   paymentsEnabled = false,
   reviews = [],
+  featuredIds,
 }: {
   categories: PublicCatalogCategory[];
   products: PublicCatalogProduct[];
+  /** Products to show before the visitor filters; without it the first eight are shown. */
+  featuredIds?: string[];
   settings: SiteSettings;
   paymentsEnabled?: boolean;
   reviews?: PublicReview[];
@@ -38,6 +41,7 @@ export function HomePage({
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<PublicCatalogProduct | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [showAllProducts, setShowAllProducts] = useState(false);
   const t = (key: string) => translate(locale, key);
   const matchingCategories = categories.filter((category) =>
     matchesMultilingualSearch(query, category.name),
@@ -50,10 +54,25 @@ export function HomePage({
   const visibleSubcategories = categories.filter((category) =>
     category.parentId === expandedCategory && matchesMultilingualSearch(query, category.name),
   );
-  const visibleProducts = products.filter((product) =>
+  const isFiltering = Boolean(selectedCategory || query.trim());
+  const featuredProducts = featuredIds
+    ? featuredIds.flatMap((id) => products.filter((product) => product.id === id))
+    : products.slice(0, 8);
+  const showFeatured = !isFiltering && !showAllProducts && featuredProducts.length < products.length;
+  const visibleProducts = showFeatured ? featuredProducts : products.filter((product) =>
     (!selectedCategory || product.categoryIds.includes(selectedCategory)) &&
     matchesMultilingualSearch(query, product.name, product.path),
   );
+  // The dialog arrows browse the products currently listed (featured, category or search results).
+  const selectedIndex = selectedProduct ? visibleProducts.findIndex((product) => product.id === selectedProduct.id) : -1;
+  const selectedCategoryName = categories.find((category) => category.id === selectedCategory)?.name;
+  const productsTitle = showFeatured
+    ? t("featured.title")
+    : selectedCategoryName
+      ? t(categoryMessageKey(selectedCategoryName) ?? selectedCategoryName)
+      : query.trim()
+        ? t("featured.searchTitle")
+        : t("featured.allTitle");
   const addToCart = (product: PublicCatalogProduct) => {
     if (!product.available) return;
     setCartItems((current) => {
@@ -159,15 +178,44 @@ export function HomePage({
 
       <section className="section featured" id="prodotti">
         <div className="section-heading"><div>
-          <div className="eyebrow"><span /> {t("featured.eyebrow")}</div>
-          <h2>{t("featured.title")}</h2>
+          <div className="eyebrow"><span /> {t(showFeatured ? "featured.eyebrow" : "featured.catalogEyebrow")}</div>
+          <h2>{productsTitle}</h2>
         </div></div>
         <div className="products-grid">
           {visibleProducts.map((product) => <ProductCard key={product.id} product={product} locale={locale} onSelect={() => setSelectedProduct(product)} />)}
         </div>
+        {!isFiltering && featuredProducts.length < products.length && (
+          <div className="products-more">
+            <button
+              type="button"
+              className="btn btn-dark products-more-button"
+              onClick={() => {
+                setShowAllProducts((current) => !current);
+                if (showAllProducts) document.getElementById("prodotti")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              {showAllProducts
+                ? t("featured.showFeatured")
+                : t("featured.showAll").replace("{n}", String(products.length))}
+            </button>
+          </div>
+        )}
       </section>
 
-      {selectedProduct && <ProductDetailsDialog product={selectedProduct} locale={locale} quantityInCart={cartItems.find((item) => item.product.id === selectedProduct.id)?.quantity ?? 0} onClose={() => setSelectedProduct(null)} onAddToCart={() => addToCart(selectedProduct)} />}
+      {selectedProduct && (
+        <ProductDetailsDialog
+          product={selectedProduct}
+          locale={locale}
+          quantityInCart={cartItems.find((item) => item.product.id === selectedProduct.id)?.quantity ?? 0}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={() => addToCart(selectedProduct)}
+          {...(selectedIndex >= 0 && {
+            position: { index: selectedIndex, total: visibleProducts.length },
+            onPrevious: () => setSelectedProduct(visibleProducts[(selectedIndex - 1 + visibleProducts.length) % visibleProducts.length]),
+            onNext: () => setSelectedProduct(visibleProducts[(selectedIndex + 1) % visibleProducts.length]),
+          })}
+        />
+      )}
       <ShoppingCart
         items={cartItems}
         locale={locale}

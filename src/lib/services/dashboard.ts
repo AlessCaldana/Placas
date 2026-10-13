@@ -18,9 +18,10 @@ export async function getDashboardInventory() {
   });
 
   const published = products.filter((product) => product.status === "PUBLISHED");
-  const lowStock = published.filter(
-    (product) => product.quantity !== null && product.quantity >= 0 && product.quantity <= lowStockLimit,
-  );
+  // Fewest pieces first: those are the ones to restock soonest.
+  const lowStock = published
+    .filter((product) => product.quantity !== null && product.quantity >= 0 && product.quantity <= lowStockLimit)
+    .sort((a, b) => (a.quantity ?? 0) - (b.quantity ?? 0));
 
   return {
     total: products.length,

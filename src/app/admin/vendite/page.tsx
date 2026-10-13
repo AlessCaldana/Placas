@@ -1,20 +1,32 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { AdminHeader, PreviewBanner } from "@/components/admin/AdminHeader";
+import { SalesList, type SalesOrder } from "@/components/admin/SalesList";
+import { ADMIN_SESSION_COOKIE, isAdminAuthRequired, isValidAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getRequestLocale } from "@/lib/locale";
-import { listAdminOrders, type AdminOrder } from "@/lib/services/orders";
+import { listAdminOrders } from "@/lib/services/orders";
 import { translate } from "@/messages";
 
 export default async function Page() {
+  // The layout already checks the session; repeat it next to the data access
+  // so customer and billing details never load without one.
+  const cookieStore = await cookies();
+  if (isAdminAuthRequired() && !isValidAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value)) {
+    redirect("/login");
+  }
   const locale = await getRequestLocale();
   const t = (key: string) => translate(locale, key);
-  const eur = (cents: number) =>
-    new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(cents / 100);
 
-  let orders: AdminOrder[] = [];
+  let orders: SalesOrder[] = [];
   let databaseError = false;
   if (isDatabaseConfigured()) {
     try {
-      orders = await listAdminOrders();
+      // Dates become ISO strings so the list can be passed to a client component.
+      orders = (await listAdminOrders()).map((order) => ({
+        ...order,
+        paidAt: order.paidAt ? order.paidAt.toISOString() : null,
+      }));
     } catch {
       databaseError = true;
     }
@@ -25,53 +37,7 @@ export default async function Page() {
       <AdminHeader title={t("admin.sales.title")} subtitle={t("admin.orders.subtitle")} />
       {!isDatabaseConfigured() && <PreviewBanner />}
       {databaseError && <p className="field-error" role="alert">{t("admin.database.unavailable")}</p>}
-      <section className="admin-card">
-        {orders.length === 0 ? (
-          <p>{t("admin.orders.empty")}</p>
-        ) : (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("admin.orders.date")}</th>
-                  <th>{t("admin.orders.customer")}</th>
-                  <th>{t("admin.orders.products")}</th>
-                  <th>{t("admin.orders.shipping")}</th>
-                  <th>{t("admin.orders.toReceive")}</th>
-                  <th>{t("admin.orders.status")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.paidAt ? new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(order.paidAt) : "—"}</td>
-                    <td>
-                      <b>{order.customerName || "—"}</b>
-                      <br />
-                      <small>{order.customerEmail}</small>
-                      <br />
-                      <small>{order.address}</small>
-                    </td>
-                    <td>
-                      {order.items.map((item) => (
-                        <div key={item.referenceCode}>{item.quantity} × {item.name} <small>({item.referenceCode})</small></div>
-                      ))}
-                    </td>
-                    <td>{eur(order.shippingCents)}</td>
-                    <td><b>{eur(order.productsCents + order.shippingCents)}</b></td>
-                    <td>
-                      <span className={`status ${order.status === "PAID" ? "published" : "unavailable"}`}>
-                        {t(order.status === "PAID" ? "admin.orders.paid" : "admin.orders.needsReview")}
-                      </span>
-                      {order.reviewReason && <><br /><small>{order.reviewReason}</small></>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <SalesList orders={orders} />
     </>
   );
 }

@@ -64,6 +64,35 @@ export async function listPublicProducts(): Promise<PublicCatalogProduct[]> {
   });
 }
 
+/**
+ * Ids of the products to feature on the home page: available products ranked by
+ * pieces sold online, then by page views, then newest first.
+ */
+export async function listFeaturedProductIds(limit = 8): Promise<string[]> {
+  const db = getDb();
+  const [products, sales] = await Promise.all([
+    db.product.findMany({
+      where: { status: "PUBLISHED", category: { active: true } },
+      select: { id: true, quantity: true, viewCount: true, createdAt: true },
+    }),
+    db.orderItem.groupBy({
+      by: ["productId"],
+      where: { productId: { not: null }, order: { status: { in: ["PAID", "NEEDS_REVIEW"] } } },
+      _sum: { quantity: true },
+    }),
+  ]);
+  const sold = new Map(sales.map((row) => [row.productId, row._sum.quantity ?? 0]));
+  return products
+    .filter((product) => !isOutOfStock(product.quantity))
+    .sort((a, b) =>
+      (sold.get(b.id) ?? 0) - (sold.get(a.id) ?? 0) ||
+      b.viewCount - a.viewCount ||
+      b.createdAt.getTime() - a.createdAt.getTime(),
+    )
+    .slice(0, limit)
+    .map((product) => product.id);
+}
+
 function toSlug(value: string): string {
   return (
     value

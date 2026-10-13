@@ -6,6 +6,7 @@ import { calculateCheckoutPricing } from "@/lib/payments/checkout-pricing";
 import { shippingCostFor, type ShippingCountry } from "@/lib/payments/shipping";
 import { getConnectedAccountId, getStripe } from "@/lib/payments/stripe";
 import { getSiteSettings } from "@/lib/services/site-settings";
+import { extractBillingDetails } from "@/lib/validators/billing";
 import { parseE164Phone } from "@/lib/validators/phone";
 import { translate, type Locale } from "@/messages";
 
@@ -143,6 +144,12 @@ export async function startCheckout(
       shipping_address_collection: { allowed_countries: [country] },
       // Used by PFdeco to send the tracking code on WhatsApp.
       phone_number_collection: { enabled: true },
+      // "I'm buying as a business": optional business name and VAT number, so
+      // PFdeco can issue the invoice with its own software. Full billing address
+      // is required because an invoice needs it (Stripe otherwise may only ask
+      // for country and postal code); the buyer can tick "same as shipping".
+      tax_id_collection: { enabled: true },
+      billing_address_collection: "required",
       // The buyer sees products at their real price; shipping and the service
       // and payment costs are shown together as one "shipping and handling" line.
       shipping_options: [
@@ -186,6 +193,7 @@ export async function fulfillPaidSession(session: Stripe.Checkout.Session): Prom
   const shipping = session.collected_information?.shipping_details ?? null;
   const paymentIntent =
     typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+  const billing = extractBillingDetails(session.customer_details);
 
   await getDb().$transaction(async (tx) => {
     const claimed = await tx.order.updateMany({
@@ -198,6 +206,11 @@ export async function fulfillPaidSession(session: Stripe.Checkout.Session): Prom
         customerName: (shipping?.name ?? session.customer_details?.name)?.slice(0, 200) ?? null,
         customerPhone: parseE164Phone(session.customer_details?.phone),
         shippingAddress: shipping?.address ? { ...shipping.address } : undefined,
+        invoiceRequested: billing.invoiceRequested,
+        billingBusinessName: billing.businessName,
+        billingTaxIdType: billing.taxIdType,
+        billingTaxId: billing.taxId,
+        billingAddress: billing.address ?? undefined,
       },
     });
     if (claimed.count === 0) return;
@@ -242,13 +255,25 @@ export async function cancelSessionOrder(session: Stripe.Checkout.Session): Prom
   });
 }
 
+export type AdminOrderBilling = {
+  businessName: string;
+  taxIdType: string;
+  taxId: string;
+  address: string;
+};
+
 export type AdminOrder = {
   id: string;
+  orderNumber: string;
   status: "PAID" | "NEEDS_REVIEW";
   paidAt: Date | null;
   customerName: string;
   customerEmail: string;
+  customerPhone: string;
   address: string;
+  invoiceRequested: boolean;
+  /** Company billing details; null when the buyer did not ask for an invoice. */
+  billing: AdminOrderBilling | null;
   items: { name: string; referenceCode: string; quantity: number }[];
   productsCents: number;
   shippingCents: number;
@@ -278,11 +303,22 @@ export async function listAdminOrders(limit = 100): Promise<AdminOrder[]> {
   });
   return orders.map((order) => ({
     id: order.id,
+    orderNumber: order.orderNumber ?? "",
     status: order.status as AdminOrder["status"],
     paidAt: order.paidAt,
     customerName: order.customerName ?? "",
     customerEmail: order.customerEmail ?? "",
+    customerPhone: order.customerPhone ?? "",
     address: formatAddress(order.shippingAddress),
+    invoiceRequested: order.invoiceRequested,
+    billing: order.invoiceRequested
+      ? {
+          businessName: order.billingBusinessName ?? "",
+          taxIdType: order.billingTaxIdType ?? "",
+          taxId: order.billingTaxId ?? "",
+          address: formatAddress(order.billingAddress),
+        }
+      : null,
     items: order.items,
     productsCents: order.productsCents,
     shippingCents: order.shippingCents,

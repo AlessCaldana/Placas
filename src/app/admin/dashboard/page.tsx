@@ -266,13 +266,17 @@ function InventorySummary({
               <p>{t("admin.dashboard.lowStockHint")}</p>
             </div>
           </div>
-          {inventory.lowStock.length ? inventory.lowStock.map((product) => (
-            <div className="rank-row" key={product.id}>
-              <span><Icon name="box" size={18} /></span>
-              <b>{product.name}<small className="dashboard-reference">{product.referenceCode}</small></b>
-              <strong>{product.quantity}</strong>
+          {inventory.lowStock.length ? (
+            <div className="dashboard-scroll-list">
+              {inventory.lowStock.map((product) => (
+                <div className="rank-row" key={product.id}>
+                  <span><Icon name="box" size={18} /></span>
+                  <b>{product.name}<small className="dashboard-reference">{product.referenceCode}</small></b>
+                  <strong>{product.quantity}</strong>
+                </div>
+              ))}
             </div>
-          )) : <p className="dashboard-empty">{t("admin.dashboard.noLowStock")}</p>}
+          ) : <p className="dashboard-empty">{t("admin.dashboard.noLowStock")}</p>}
         </section>
 
         <section className="admin-card">

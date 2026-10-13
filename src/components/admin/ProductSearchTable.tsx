@@ -31,7 +31,7 @@ export function ProductSearchTable({ products }: { products: AdminProduct[] }) {
         />
       </label>
       <section className="admin-card table-card">
-        <div className="table-scroll">
+        <div className="table-scroll admin-scroll-box">
           <table>
             <thead>
               <tr>
