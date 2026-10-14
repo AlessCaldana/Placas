@@ -26,15 +26,16 @@ import {
   ENV_ADMIN_ID,
   SESSION_TTL_SECONDS,
   createSessionToken,
+  isAdminAuthRequired,
+  isLoopbackHost,
   verifySessionToken,
 } from "@/lib/admin-session";
 import {
-  beginLoginAttempt,
+  MAX_CONCURRENT_VERIFICATIONS,
+  accountBackoffMs,
   beginPasswordChangeAttempt,
-  completeLoginAttempt,
   completePasswordChangeAttempt,
-  loginRetryAfterSeconds,
-  releaseLoginAttempt,
+  createLoginGuard,
   releasePasswordChangeAttempt,
 } from "@/lib/login-rate-limit";
 import { createRateLimiter } from "@/lib/rate-limit";
@@ -55,11 +56,17 @@ function activeUser(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function requestWith(token: string | null) {
+function requestWith(token: string | null, extraHeaders: Record<string, string> = {}) {
   return new Request("http://localhost/api/admin/products", {
-    headers: token ? { cookie: `other=1; ${ADMIN_SESSION_COOKIE}=${token}` } : {},
+    headers: {
+      ...(token ? { cookie: `other=1; ${ADMIN_SESSION_COOKIE}=${token}` } : {}),
+      ...extraHeaders,
+    },
   });
 }
+
+/** Headers of a request made from this machine to the dev server (Next fills X-Forwarded-For). */
+const LOCAL = { host: "localhost:3000", "x-forwarded-for": "::1" };
 
 beforeEach(() => {
   process.env.AUTH_SECRET = "test-secret-with-at-least-32-bytes!!";
@@ -211,20 +218,73 @@ describe("bootstrap login with ADMIN_EMAIL / ADMIN_PASSWORD", () => {
   });
 });
 
-describe("requireAdmin", () => {
-  it("returns the dev identity when login is off in development", async () => {
-    delete process.env.ADMIN_AUTH;
-    const result = await requireAdmin(requestWith(null), { role: "SUPERADMIN" });
-    expect(result).toMatchObject({ id: "dev", role: "SUPERADMIN", dev: true });
-    expect(await rejectWithoutAdminSession(requestWith(null))).toBeNull();
+describe("isAdminAuthRequired", () => {
+  const headers = (values: Record<string, string>) => new Headers(values);
+
+  it("is off only with ADMIN_AUTH=off, outside production, from this machine", () => {
+    process.env.ADMIN_AUTH = "off";
+    expect(isAdminAuthRequired(headers(LOCAL))).toBe(false);
+    expect(isAdminAuthRequired(headers({ host: "127.0.0.1:3000", "x-forwarded-for": "127.0.0.1" }))).toBe(false);
+    expect(isAdminAuthRequired(headers({ host: "[::1]:3000", "x-forwarded-for": "::ffff:127.0.0.1" }))).toBe(false);
   });
 
-  it("requires a session in production and with ADMIN_AUTH=on", async () => {
+  it("is required when ADMIN_AUTH is missing or anything but off", () => {
+    delete process.env.ADMIN_AUTH;
+    expect(isAdminAuthRequired(headers(LOCAL))).toBe(true);
+    process.env.ADMIN_AUTH = "on";
+    expect(isAdminAuthRequired(headers(LOCAL))).toBe(true);
+    process.env.ADMIN_AUTH = "OFF";
+    expect(isAdminAuthRequired(headers(LOCAL))).toBe(true);
+  });
+
+  it("is always required in production", () => {
+    process.env.ADMIN_AUTH = "off";
     vi.stubEnv("NODE_ENV", "production");
-    expect((await rejectWithoutAdminSession(requestWith(null)))?.status).toBe(401);
+    expect(isAdminAuthRequired(headers(LOCAL))).toBe(true);
+  });
+
+  it("is required for requests that do not come from this machine", () => {
+    process.env.ADMIN_AUTH = "off";
+    // Reached through the LAN address: Next puts the client's address in X-Forwarded-For.
+    expect(isAdminAuthRequired(headers({ host: "192.168.1.10:3000", "x-forwarded-for": "192.168.1.20" }))).toBe(true);
+    // Forged Host header from another machine.
+    expect(isAdminAuthRequired(headers({ host: "localhost:3000", "x-forwarded-for": "192.168.1.20" }))).toBe(true);
+    // Behind a proxy that forwards the real client address.
+    expect(isAdminAuthRequired(headers({ host: "localhost", "x-forwarded-for": "127.0.0.1, 203.0.113.9" }))).toBe(true);
+    expect(isAdminAuthRequired(headers({ host: "placa.example.com", "x-forwarded-for": "::1" }))).toBe(true);
+    expect(isAdminAuthRequired(headers({}))).toBe(true);
+  });
+
+  it("parses the Host header strictly", () => {
+    expect(isLoopbackHost("localhost")).toBe(true);
+    expect(isLoopbackHost("LOCALHOST:3000")).toBe(true);
+    expect(isLoopbackHost("[::1]:3000")).toBe(true);
+    expect(isLoopbackHost("localhost.evil.example")).toBe(false);
+    expect(isLoopbackHost("127.0.0.1@evil.example")).toBe(false);
+    expect(isLoopbackHost("")).toBe(false);
+    expect(isLoopbackHost(null)).toBe(false);
+  });
+});
+
+describe("requireAdmin", () => {
+  it("returns the dev identity only with ADMIN_AUTH=off from this machine", async () => {
+    process.env.ADMIN_AUTH = "off";
+    const result = await requireAdmin(requestWith(null, LOCAL), { role: "SUPERADMIN" });
+    expect(result).toMatchObject({ id: "dev", role: "SUPERADMIN", dev: true });
+    expect(await rejectWithoutAdminSession(requestWith(null, LOCAL))).toBeNull();
+    const fromLan = requestWith(null, { host: "192.168.1.10:3000", "x-forwarded-for": "192.168.1.20" });
+    expect((await rejectWithoutAdminSession(fromLan))?.status).toBe(401);
+  });
+
+  it("requires a session by default, in production and with ADMIN_AUTH=on", async () => {
+    delete process.env.ADMIN_AUTH;
+    expect((await rejectWithoutAdminSession(requestWith(null, LOCAL)))?.status).toBe(401);
+    process.env.ADMIN_AUTH = "off";
+    vi.stubEnv("NODE_ENV", "production");
+    expect((await rejectWithoutAdminSession(requestWith(null, LOCAL)))?.status).toBe(401);
     vi.unstubAllEnvs();
     process.env.ADMIN_AUTH = "on";
-    expect((await rejectWithoutAdminSession(requestWith(null)))?.status).toBe(401);
+    expect((await rejectWithoutAdminSession(requestWith(null, LOCAL)))?.status).toBe(401);
   });
 
   it("accepts a valid user session and enforces the role", async () => {
@@ -264,67 +324,142 @@ describe("isCrossOriginRequest", () => {
 });
 
 describe("login rate limit", () => {
-  // Each test uses its own time range so the in-memory windows do not mix.
+  // Every test builds its own guard, so the in-memory counters never mix.
   const WINDOW = 15 * 60 * 1000;
 
-  it("blocks an IP after five failures and unblocks when the window ends", () => {
+  /** Begins an attempt and immediately judges it as wrong credentials. */
+  function failOnce(guard: ReturnType<typeof createLoginGuard>, ip: string | null, account: string, now: number) {
+    const retryAfter = guard.begin(ip, account, now);
+    if (retryAfter === 0) guard.fail();
+    return retryAfter;
+  }
+
+  it("blocks a trustworthy IP after five failures and unblocks when the window ends", () => {
+    const guard = createLoginGuard();
     const ip = "203.0.113.7";
     const start = 1_000_000;
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      expect(beginLoginAttempt(ip, `user${attempt}@example.com`, start)).toBe(0);
+      expect(failOnce(guard, ip, `user${attempt}@example.com`, start)).toBe(0);
     }
-    expect(beginLoginAttempt(ip, "other@example.com", start)).toBe(15 * 60);
-    expect(loginRetryAfterSeconds(ip, "other@example.com", start + WINDOW)).toBe(0);
+    expect(guard.begin(ip, "other@example.com", start)).toBe(15 * 60);
+    expect(guard.retryAfterSeconds(ip, "other@example.com", start + WINDOW)).toBe(0);
+  });
+
+  it("spoofed IPs (untrusted, null) cannot bypass the per-account backoff", () => {
+    const guard = createLoginGuard();
+    const owner = "owner@example.com";
+    const start = 2_000_000;
+    // Without a trusted proxy the IP is null whatever X-Forwarded-For says.
+    for (let attempt = 0; attempt < 5; attempt += 1) expect(failOnce(guard, null, owner, start)).toBe(0);
+    // Sixth attempt: has to wait 15 s after the last failure...
+    expect(guard.begin(null, owner, start)).toBe(15);
+    expect(failOnce(guard, null, owner, start + 15_000)).toBe(0);
+    // ...then 30 s, 60 s, ... (progressive, capped).
+    expect(guard.begin(null, owner, start + 15_000)).toBe(30);
+    // Other accounts are not affected.
+    expect(guard.begin(null, "someone-else@example.com", start)).toBe(0);
+  });
+
+  it("the backoff grows but is capped, and is never a permanent lockout", () => {
+    expect(accountBackoffMs(4)).toBe(0);
+    expect(accountBackoffMs(5)).toBe(15_000);
+    expect(accountBackoffMs(6)).toBe(30_000);
+    expect(accountBackoffMs(9)).toBe(240_000);
+    expect(accountBackoffMs(11)).toBe(15 * 60 * 1000);
+    expect(accountBackoffMs(10_000)).toBe(15 * 60 * 1000);
+
+    const guard = createLoginGuard();
+    const owner = "owner-cap@example.com";
+    let now = 3_000_000;
+    // An attacker grabbing every slot for a long time.
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const wait = guard.retryAfterSeconds(null, owner, now);
+      now += wait * 1000;
+      expect(failOnce(guard, null, owner, now)).toBe(0);
+    }
+    expect(guard.retryAfterSeconds(null, owner, now)).toBe(15 * 60);
+    // The owner can always try again at the next slot...
+    expect(guard.begin(null, owner, now + 15 * 60 * 1000)).toBe(0);
+    guard.complete(null, owner, now + 15 * 60 * 1000);
+    // ...and after an hour without failures the account starts fresh.
+    expect(guard.retryAfterSeconds(null, owner, now + 15 * 60 * 1000 + 60 * 60 * 1000)).toBe(0);
+  });
+
+  it("an attack on one account from many IPs does not keep the owner out of a clean, trusted IP", () => {
+    const guard = createLoginGuard();
+    const start = 4_000_000;
+    const target = "owner-under-attack@example.com";
+    for (let attempt = 0; attempt < 10; attempt += 1) failOnce(guard, `198.51.100.${attempt}`, target, start);
+    // An attacking IP that already failed has to wait for the account backoff...
+    expect(guard.retryAfterSeconds("198.51.100.0", target, start)).toBeGreaterThan(0);
+    // ...while the owner, from an address without failures, may still try once.
+    expect(failOnce(guard, "192.0.2.50", target, start)).toBe(0);
+    expect(guard.begin("192.0.2.50", target, start)).toBeGreaterThan(0);
   });
 
   it("reserves attempts synchronously, so parallel requests cannot all pass", () => {
-    const ip = "203.0.113.8";
-    const start = 10_000_000;
-    // Ten concurrent requests reach the check before any password is verified.
-    const results = Array.from({ length: 10 }, () => beginLoginAttempt(ip, "owner@example.com", start));
-    expect(results.filter((retryAfter) => retryAfter === 0)).toHaveLength(5);
+    const guard = createLoginGuard();
+    const start = 5_000_000;
+    // Ten concurrent requests reach the check before any password is verified;
+    // the verification slots and the account backoff both stop the rest.
+    const results = Array.from({ length: 10 }, () => guard.begin(null, "owner@example.com", start));
+    expect(results.filter((retryAfter) => retryAfter === 0)).toHaveLength(MAX_CONCURRENT_VERIFICATIONS);
+    expect(guard.activeVerifications()).toBe(MAX_CONCURRENT_VERIFICATIONS);
+  });
+
+  it("caps concurrent password verifications globally and frees the slots", () => {
+    const guard = createLoginGuard();
+    const start = 6_000_000;
+    for (let index = 0; index < MAX_CONCURRENT_VERIFICATIONS; index += 1) {
+      expect(guard.begin(null, `spray${index}@example.com`, start)).toBe(0);
+    }
+    // Any account, any IP: no slot left.
+    expect(guard.begin(null, "owner@example.com", start)).toBe(1);
+    expect(guard.precheck("192.0.2.1", start)).toBe(1);
+    guard.fail();
+    expect(guard.begin(null, "owner@example.com", start)).toBe(0);
+    guard.complete(null, "owner@example.com", start);
+    guard.release(null, "spray1@example.com", start);
+    guard.fail();
+    guard.fail();
+    expect(guard.activeVerifications()).toBe(0);
   });
 
   it("a successful login clears the IP and releases its reservation", () => {
+    const guard = createLoginGuard();
     const ip = "203.0.113.9";
-    const start = 20_000_000;
-    for (let attempt = 0; attempt < 4; attempt += 1) beginLoginAttempt(ip, "a@example.com", start);
-    beginLoginAttempt(ip, "a@example.com", start);
-    completeLoginAttempt(ip, "a@example.com", start);
-    expect(loginRetryAfterSeconds(ip, "a@example.com", start)).toBe(0);
+    const start = 7_000_000;
+    for (let attempt = 0; attempt < 4; attempt += 1) failOnce(guard, ip, "a@example.com", start);
+    expect(guard.begin(ip, "a@example.com", start)).toBe(0);
+    guard.complete(ip, "a@example.com", start);
+    expect(guard.retryAfterSeconds(ip, "a@example.com", start)).toBe(0);
   });
 
   it("a server error releases the reservation", () => {
+    const guard = createLoginGuard();
     const ip = "203.0.113.10";
-    const start = 30_000_000;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      beginLoginAttempt(ip, "b@example.com", start);
-      releaseLoginAttempt(ip, "b@example.com", start);
+    const start = 8_000_000;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      expect(guard.begin(ip, "b@example.com", start)).toBe(0);
+      guard.release(ip, "b@example.com", start);
     }
-    expect(loginRetryAfterSeconds(ip, "b@example.com", start)).toBe(0);
+    expect(guard.retryAfterSeconds(ip, "b@example.com", start)).toBe(0);
+    expect(guard.activeVerifications()).toBe(0);
   });
 
-  it("an attack on one account leaves a single attempt per IP, but never locks the owner out", () => {
-    const start = 40_000_000;
-    const target = "owner-under-attack@example.com";
-    for (let attempt = 0; attempt < 10; attempt += 1) beginLoginAttempt(`198.51.100.${attempt}`, target, start);
-    // An attacking IP that already failed is blocked for this account...
-    expect(loginRetryAfterSeconds("198.51.100.0", target, start)).toBeGreaterThan(0);
-    // ...while the owner, from an address without failures, may still try.
-    expect(beginLoginAttempt("192.0.2.50", target, start)).toBe(0);
-    expect(beginLoginAttempt("192.0.2.50", target, start)).toBeGreaterThan(0);
-    // Other accounts are not affected by the account alert.
-    expect(loginRetryAfterSeconds("198.51.100.0", "someone-else@example.com", start)).toBe(0);
-  });
-
-  it("many failures overall switch every IP to one attempt instead of a global lockout", () => {
-    const start = 50_000_000;
+  it("many failures overall leave one attempt per trusted IP, and do not touch untrusted clients", () => {
+    const guard = createLoginGuard();
+    const start = 9_000_000;
     for (let attempt = 0; attempt < 30; attempt += 1) {
-      beginLoginAttempt(`198.51.101.${attempt}`, `spray${attempt}@example.com`, start);
+      failOnce(guard, `198.51.101.${attempt}`, `spray${attempt}@example.com`, start);
     }
-    expect(beginLoginAttempt("192.0.2.1", "owner@example.com", start + 60_000)).toBe(0);
-    expect(beginLoginAttempt("192.0.2.1", "owner@example.com", start + 60_000)).toBe(15 * 60);
-    expect(loginRetryAfterSeconds("192.0.2.1", "owner@example.com", start + WINDOW)).toBe(0);
+    expect(failOnce(guard, "192.0.2.1", "owner@example.com", start + 60_000)).toBe(0);
+    expect(guard.begin("192.0.2.1", "owner@example.com", start + 60_000)).toBe(15 * 60);
+    expect(guard.retryAfterSeconds("192.0.2.1", "owner@example.com", start + WINDOW + 60_000)).toBe(0);
+    // Without trusted IPs the "under attack" mode has no effect: the owner keeps
+    // the normal per-account allowance.
+    expect(guard.begin(null, "owner2@example.com", start + 60_000)).toBe(0);
+    guard.complete(null, "owner2@example.com", start + 60_000);
   });
 
   it("limits wrong current passwords per account, with the same reservation", () => {

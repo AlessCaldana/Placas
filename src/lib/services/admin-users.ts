@@ -330,3 +330,18 @@ export async function changeOwnPassword(
   if (result.length !== 1) throw new AdminUserError("no_account");
   return { sessionVersion: result[0].sessionVersion };
 }
+
+/**
+ * Server-side logout: bumps the account's sessionVersion so the cookie being
+ * logged out (and every other cookie of that account) stops working, even if a
+ * copy of it was kept. Only applies while the cookie's version is still the
+ * current one, so an old cookie cannot log out newer sessions. Returns whether
+ * a row changed.
+ */
+export async function revokeAdminSessions(userId: string, sessionVersion: number): Promise<boolean> {
+  const result = await getDb().adminUser.updateMany({
+    where: { id: userId, sessionVersion },
+    data: { sessionVersion: { increment: 1 } },
+  });
+  return result.count > 0;
+}

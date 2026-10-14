@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
-import { bufferRequestWithinProductImageLimit } from "@/lib/product-images";
-import { clientKey, createRateLimiter } from "@/lib/rate-limit";
+import { UNKNOWN_CLIENT, clientIp, createRateLimiter } from "@/lib/rate-limit";
+import { bodyErrorResponse, readBoundedJson } from "@/lib/request-body";
 import { createReview, parseReviewInput } from "@/lib/services/reviews";
 import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 8 * 1024;
-// Every submission counts, valid or not: 5 per IP every 15 minutes.
-const submitLimiter = createRateLimiter({ max: 5, windowMs: 15 * 60 * 1000 });
+// Every submission counts, valid or not: 5 per IP every 15 minutes. Clients
+// whose IP cannot be trusted (no TRUSTED_PROXY_HOPS) share one bucket of 30.
+const PER_IP_MAX = 5;
+const UNKNOWN_IP_MAX = 30;
+const submitLimiter = createRateLimiter({ max: UNKNOWN_IP_MAX, windowMs: 15 * 60 * 1000 });
 
 export async function POST(request: Request) {
   if (isCrossOriginRequest(request)) {
@@ -19,8 +22,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }
 
-  const key = clientKey(request);
-  const retryAfter = submitLimiter.retryAfterSeconds(key);
+  const ip = clientIp(request);
+  const key = ip ?? UNKNOWN_CLIENT;
+  const retryAfter = submitLimiter.retryAfterSeconds(key, Date.now(), ip ? PER_IP_MAX : UNKNOWN_IP_MAX);
   if (retryAfter > 0) {
     return NextResponse.json(
       { error: "too_many_requests" },
@@ -30,18 +34,13 @@ export async function POST(request: Request) {
   submitLimiter.register(key);
 
   // Stops reading as soon as the body exceeds the limit.
-  const bounded = await bufferRequestWithinProductImageLimit(request, MAX_BODY_BYTES);
-  const text = bounded ? await bounded.text().catch(() => null) : null;
-  if (text === null || text.length > MAX_BODY_BYTES) {
-    return NextResponse.json({ error: "invalid_review" }, { status: 400 });
+  const read = await readBoundedJson(request, MAX_BODY_BYTES);
+  if (!read.ok) {
+    return read.error === "request_too_large"
+      ? bodyErrorResponse(read.error)
+      : NextResponse.json({ error: "invalid_review" }, { status: 400 });
   }
-  let body: unknown = null;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    body = null;
-  }
-  const input = parseReviewInput(body);
+  const input = parseReviewInput(read.value);
   if (!input) return NextResponse.json({ error: "invalid_review" }, { status: 400 });
 
   try {

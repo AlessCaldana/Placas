@@ -8,6 +8,7 @@ import {
   completePasswordChangeAttempt,
   releasePasswordChangeAttempt,
 } from "@/lib/login-rate-limit";
+import { BODY_LIMITS, bodyErrorResponse, readBoundedJson } from "@/lib/request-body";
 import { isCrossOriginRequest } from "@/lib/request-origin";
 import { AdminUserError, changeOwnPassword } from "@/lib/services/admin-users";
 import { parsePasswordChangeInput } from "@/lib/validators/admin-user";
@@ -32,7 +33,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }
 
-  const parsed = parsePasswordChangeInput(await request.json().catch(() => null));
+  const read = await readBoundedJson(request, BODY_LIMITS.credentials);
+  if (!read.ok) return bodyErrorResponse(read.error);
+  const parsed = parsePasswordChangeInput(read.value);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   // Check and reserve before scrypt runs, so parallel requests cannot all pass.

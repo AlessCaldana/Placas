@@ -5,7 +5,7 @@ import { ADMIN_SESSION_COOKIE, isAdminAuthRequired, verifySessionToken } from "@
 // and the admin layout/pages do the full check: account exists, is active and
 // its sessionVersion matches (see src/lib/admin-auth.ts).
 export function proxy(request: NextRequest) {
-  if (!isAdminAuthRequired() || verifySessionToken(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)) {
+  if (!isAdminAuthRequired(request.headers) || verifySessionToken(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)) {
     return NextResponse.next();
   }
   if (request.nextUrl.pathname.startsWith("/api/")) {

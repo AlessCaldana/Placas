@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/payments/stripe";
+import { BODY_LIMITS, bodyErrorResponse, readBoundedText } from "@/lib/request-body";
 import { cancelSessionOrder, fulfillPaidSession } from "@/lib/services/orders";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  // The signature is computed over the raw body, so read it as text.
-  const payload = await request.text();
+  // The signature is computed over the raw body, so read it as text. The size
+  // is capped before verifying, so an unsigned request cannot make us buffer
+  // an arbitrary amount.
+  const read = await readBoundedText(request, BODY_LIMITS.stripeWebhook);
+  if (!read.ok) return bodyErrorResponse(read.error);
+  const payload = read.text;
   let event: Stripe.Event;
   try {
     event = getStripe().webhooks.constructEvent(payload, signature, secret);

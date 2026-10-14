@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { bufferRequestWithinLimit } from "@/lib/request-body";
 
 export const maxProductImageCount = 8;
 export const maxProductImageSize = 5 * 1024 * 1024;
@@ -66,41 +67,12 @@ export function contentLengthExceedsProductImageLimit(value: string | null): boo
   return Number.isFinite(length) && length > maxProductImageRequestSize;
 }
 
+/** Buffers a product upload within the image request limit (see src/lib/request-body.ts). */
 export async function bufferRequestWithinProductImageLimit(
   request: Request,
   limit = maxProductImageRequestSize,
 ): Promise<Request | null> {
-  const declaredLength = request.headers.get("content-length");
-  if (declaredLength !== null) {
-    const length = Number(declaredLength);
-    if (Number.isFinite(length) && length > limit) return null;
-  }
-
-  if (!request.body) return request;
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > limit) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-
-  const headers = new Headers(request.headers);
-  headers.delete("content-length");
-  headers.delete("transfer-encoding");
-  headers.delete("host");
-  return new Request(request.url, {
-    method: request.method,
-    headers,
-    body: Buffer.concat(chunks),
-  });
+  return bufferRequestWithinLimit(request, limit);
 }
 
 const uploadDirectory = join(process.cwd(), "public", "uploads", "products");

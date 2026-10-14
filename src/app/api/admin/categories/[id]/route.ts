@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { rejectWithoutAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { deleteAdminCategory, setAdminCategoryActive } from "@/lib/services/categories";
+import { BODY_LIMITS, bodyErrorResponse, readBoundedJson } from "@/lib/request-body";
 import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,9 @@ export async function PATCH(
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }
-  const body: unknown = await request.json().catch(() => null);
+  const read = await readBoundedJson(request, BODY_LIMITS.smallJson);
+  if (!read.ok) return bodyErrorResponse(read.error);
+  const body = read.value;
   if (!body || typeof body !== "object" || typeof (body as { active?: unknown }).active !== "boolean") {
     return NextResponse.json({ error: "invalid_category" }, { status: 400 });
   }

@@ -8,7 +8,9 @@ export type ReviewInput = {
 
 export type ReviewModerationStatus = "APPROVED" | "HIDDEN";
 
-const SESSION_ID = /^cs_[A-Za-z0-9_]{10,255}$/;
+// Stripe Checkout session id; at most 255 characters in total, like the
+// orders.stripeSessionId column.
+const SESSION_ID = /^cs_[A-Za-z0-9_]{10,252}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Letters in any script (accents included), spaces, apostrophes and hyphens.
 const PERSON_NAME = /^[\p{L} '’-]+$/u;

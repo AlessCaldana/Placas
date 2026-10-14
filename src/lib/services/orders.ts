@@ -8,6 +8,7 @@ import { getConnectedAccountId, getStripe } from "@/lib/payments/stripe";
 import { getSiteSettings } from "@/lib/services/site-settings";
 import { extractBillingDetails } from "@/lib/validators/billing";
 import { parseE164Phone } from "@/lib/validators/phone";
+import { isCheckoutSessionId } from "@/lib/validators/review";
 import { translate, type Locale } from "@/messages";
 
 export type CheckoutItemInput = { productId: string; quantity: number };
@@ -253,6 +254,80 @@ export async function cancelSessionOrder(session: Stripe.Checkout.Session): Prom
     where: { id: orderId, status: "PENDING" },
     data: { status: "CANCELLED" },
   });
+}
+
+/**
+ * True when the Checkout session id belongs to one of our orders. The order
+ * confirmation page checks this before asking Stripe about a session, so
+ * arbitrary ids in the URL never reach the Stripe API.
+ */
+export async function isKnownCheckoutSession(sessionId: string): Promise<boolean> {
+  if (!isCheckoutSessionId(sessionId)) return false;
+  const order = await getDb().order.findUnique({
+    where: { stripeSessionId: sessionId },
+    select: { id: true },
+  });
+  return order !== null;
+}
+
+// ---------------------------------------------------------------------------
+// Cleanup of orders that were never paid
+//
+// Every checkout creates an order before the buyer reaches Stripe, so
+// abandoned checkouts (and spam) leave PENDING/CANCELLED rows behind. They are
+// deleted (with their items) once they are old enough that Stripe can no
+// longer turn them into a payment:
+// - CANCELLED: the session expired or the payment failed; after 7 days even
+//   delayed webhook retries (Stripe retries for up to 3 days) are over.
+// - PENDING: normally cancelled by the "expired" webhook after 30 minutes, but
+//   a delayed payment method (e.g. SEPA Direct Debit) can stay pending for up
+//   to two weeks, so these are only removed after 30 days.
+// PAID and NEEDS_REVIEW orders, and any order with paidAt set, are never touched.
+// ---------------------------------------------------------------------------
+
+export const STALE_CANCELLED_ORDER_DAYS = 7;
+export const STALE_PENDING_ORDER_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const STALE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+
+/** Where clause of the unpaid orders that may be deleted at `now`. */
+export function staleUnpaidOrdersWhere(now: Date) {
+  return {
+    paidAt: null,
+    OR: [
+      {
+        status: "CANCELLED" as const,
+        createdAt: { lt: new Date(now.getTime() - STALE_CANCELLED_ORDER_DAYS * DAY_MS) },
+      },
+      {
+        status: "PENDING" as const,
+        createdAt: { lt: new Date(now.getTime() - STALE_PENDING_ORDER_DAYS * DAY_MS) },
+      },
+    ],
+  } satisfies Prisma.OrderWhereInput;
+}
+
+/** Deletes old unpaid orders (see above). Returns how many were removed. */
+export async function deleteStaleUnpaidOrders(now = new Date()): Promise<number> {
+  const result = await getDb().order.deleteMany({ where: staleUnpaidOrdersWhere(now) });
+  return result.count;
+}
+
+let lastStaleCleanup = Number.NEGATIVE_INFINITY;
+
+/**
+ * Runs deleteStaleUnpaidOrders at most once per hour per server process
+ * (called opportunistically after a checkout). Never throws.
+ */
+export async function maybeDeleteStaleUnpaidOrders(now = Date.now()): Promise<number | null> {
+  if (now - lastStaleCleanup < STALE_CLEANUP_INTERVAL_MS) return null;
+  lastStaleCleanup = now;
+  try {
+    return await deleteStaleUnpaidOrders(new Date(now));
+  } catch (error) {
+    console.error("stale_orders_cleanup_failed", error);
+    return null;
+  }
 }
 
 export type AdminOrderBilling = {

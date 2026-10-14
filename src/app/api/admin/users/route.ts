@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { adminUserErrorResponse } from "@/lib/admin-user-errors";
 import { isDatabaseConfigured } from "@/lib/db";
+import { BODY_LIMITS, bodyErrorResponse, readBoundedJson } from "@/lib/request-body";
 import { isCrossOriginRequest } from "@/lib/request-origin";
 import { createAdminUser, listAdminUsers } from "@/lib/services/admin-users";
 import { parseCreateAdminUserInput } from "@/lib/validators/admin-user";
@@ -34,7 +35,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }
 
-  const parsed = parseCreateAdminUserInput(await request.json().catch(() => null));
+  const read = await readBoundedJson(request, BODY_LIMITS.smallJson);
+  if (!read.ok) return bodyErrorResponse(read.error);
+  const parsed = parseCreateAdminUserInput(read.value);
   if (!parsed.ok) {
     const body = parsed.error === "weak_password" ? { error: parsed.error, reason: parsed.reason } : { error: parsed.error };
     return NextResponse.json(body, { status: 400 });

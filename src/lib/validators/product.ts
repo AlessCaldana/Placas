@@ -9,6 +9,17 @@ import {
 const productStatuses = ["DRAFT", "PUBLISHED", "UNAVAILABLE"] as const;
 export const draftCategoryPlaceholder = "__draft__";
 
+/** Limits that match the database columns (VarChar(120) and INTEGER). */
+export const productTextFieldMaxLength = 120;
+export const productDescriptionMaxLength = productTranslationDescriptionMaxLength;
+export const productQuantityMax = 2_147_483_647;
+
+const PRODUCT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Product primary key (UUID) taken from a URL. */
+export function isProductId(value: unknown): value is string {
+  return typeof value === "string" && value.length === 36 && PRODUCT_ID.test(value);
+}
 export type NewProductInput = {
   referenceCode: string;
   name: string;
@@ -94,6 +105,7 @@ export function parseNewProductInput(
       : String(rawQuantity);
   const quantity = quantityText === null ? null : Number(quantityText);
   const translations = parseProductTranslationsInput(input.translations);
+  const tooLong = (field: unknown, max: number) => typeof field === "string" && field.trim().length > max;
 
   if (
     !translations.ok ||
@@ -112,7 +124,12 @@ export function parseNewProductInput(
     (!isDraft && price <= 0) ||
     (isDraft && price < 0) ||
     price > 99_999_999.99 ||
-    (quantity !== null && (!Number.isInteger(quantity) || quantity < 0)) ||
+    (quantity !== null &&
+      (!Number.isInteger(quantity) || quantity < 0 || quantity > productQuantityMax)) ||
+    tooLong(input.description, productDescriptionMaxLength) ||
+    tooLong(input.brand, productTextFieldMaxLength) ||
+    tooLong(input.model, productTextFieldMaxLength) ||
+    tooLong(input.material, productTextFieldMaxLength) ||
     !productStatuses.includes(status)
   ) {
     return { ok: false };

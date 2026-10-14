@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clientKey, createRateLimiter } from "@/lib/rate-limit";
+import {
+  clientIp,
+  createRateLimiter,
+  createSlidingWindowLimiter,
+  forwardedChainIsLoopback,
+  isLoopbackIp,
+} from "@/lib/rate-limit";
 import { isReviewableOrder, parseReviewInput, toDisplayName } from "@/lib/services/reviews";
 import { isCheckoutSessionId, isUuid, parseReviewStatusInput } from "@/lib/validators/review";
 
@@ -143,7 +149,31 @@ describe("createRateLimiter", () => {
   });
 });
 
-describe("clientKey", () => {
+describe("createSlidingWindowLimiter", () => {
+  it("allows at most max hits in any window, without a burst at the window edge", () => {
+    const limiter = createSlidingWindowLimiter({ max: 3, windowMs: 60_000 });
+    const start = 5_000_000;
+    limiter.register("k", start);
+    limiter.register("k", start + 30_000);
+    limiter.register("k", start + 50_000);
+    // The oldest hit leaves the window at start + 60 s.
+    expect(limiter.retryAfterSeconds("k", start + 55_000)).toBe(5);
+    expect(limiter.retryAfterSeconds("k", start + 60_000)).toBe(0);
+    limiter.register("k", start + 60_000);
+    // Still three hits within the last minute: blocked until start + 90 s.
+    expect(limiter.retryAfterSeconds("k", start + 61_000)).toBe(29);
+  });
+
+  it("undo releases the last reservation", () => {
+    const limiter = createSlidingWindowLimiter({ max: 1, windowMs: 60_000 });
+    limiter.register("k", 1_000);
+    expect(limiter.retryAfterSeconds("k", 1_000)).toBe(60);
+    limiter.undo("k", 1_000);
+    expect(limiter.retryAfterSeconds("k", 1_000)).toBe(0);
+  });
+});
+
+describe("clientIp", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -151,28 +181,65 @@ describe("clientKey", () => {
   const request = (headers: Record<string, string>) =>
     new Request("http://localhost/api/reviews", { headers });
 
-  it("without trusted proxies uses the last X-Forwarded-For value and ignores X-Real-IP", () => {
-    vi.stubEnv("TRUSTED_PROXY_HOPS", "");
-    expect(clientKey(request({ "x-forwarded-for": "1.1.1.1, 203.0.113.9" }))).toBe("203.0.113.9");
-    expect(clientKey(request({ "x-forwarded-for": "1.1.1.1", "x-real-ip": "203.0.113.5" }))).toBe(
-      "1.1.1.1",
-    );
-    expect(clientKey(request({ "x-real-ip": "203.0.113.5" }))).toBe("unknown");
-    expect(clientKey(request({}))).toBe("unknown");
+  it("without TRUSTED_PROXY_HOPS trusts no header at all (spoofed X-Forwarded-For is ignored)", () => {
+    for (const hops of ["", "0", "abc"]) {
+      vi.stubEnv("TRUSTED_PROXY_HOPS", hops);
+      expect(clientIp(request({ "x-forwarded-for": "1.1.1.1, 203.0.113.9" }))).toBeNull();
+      expect(clientIp(request({ "x-forwarded-for": "203.0.113.9" }))).toBeNull();
+      expect(clientIp(request({ "x-real-ip": "203.0.113.5" }))).toBeNull();
+      expect(clientIp(request({}))).toBeNull();
+    }
   });
 
-  it("with N trusted proxies uses the N-th value from the right", () => {
+  it("warns once in production when no proxy is trusted", () => {
+    vi.stubEnv("TRUSTED_PROXY_HOPS", "");
+    vi.stubEnv("NODE_ENV", "production");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    clientIp(request({}));
+    clientIp(request({}));
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it("with N trusted proxies uses the N-th value from the right and ignores X-Real-IP", () => {
     vi.stubEnv("TRUSTED_PROXY_HOPS", "2");
     const headers = { "x-forwarded-for": "6.6.6.6, 203.0.113.9, 10.0.0.2", "x-real-ip": "7.7.7.7" };
-    expect(clientKey(request(headers))).toBe("203.0.113.9");
-    expect(clientKey(request({ "x-forwarded-for": "203.0.113.9" }))).toBe("203.0.113.9");
+    expect(clientIp(request(headers))).toBe("203.0.113.9");
+    // A chain shorter than the configured proxies did not pass through all of them.
+    expect(clientIp(request({ "x-forwarded-for": "203.0.113.9" }))).toBeNull();
+    vi.stubEnv("TRUSTED_PROXY_HOPS", "1");
+    // nginx with `proxy_set_header X-Forwarded-For $remote_addr;` sends a single value.
+    expect(clientIp(request({ "x-forwarded-for": "203.0.113.9" }))).toBe("203.0.113.9");
+    // With $proxy_add_x_forwarded_for the client part on the left is ignored.
+    expect(clientIp(request({ "x-forwarded-for": "6.6.6.6, 203.0.113.9" }))).toBe("203.0.113.9");
   });
 
   it("accepts only IP addresses and unwraps IPv4-mapped IPv6", () => {
     vi.stubEnv("TRUSTED_PROXY_HOPS", "1");
-    expect(clientKey(request({ "x-forwarded-for": "::ffff:203.0.113.9" }))).toBe("203.0.113.9");
-    expect(clientKey(request({ "x-forwarded-for": "2001:DB8::1" }))).toBe("2001:db8::1");
-    expect(clientKey(request({ "x-forwarded-for": "not-an-ip" }))).toBe("unknown");
-    expect(clientKey(request({ "x-forwarded-for": "a".repeat(5000) }))).toBe("unknown");
+    expect(clientIp(request({ "x-forwarded-for": "::ffff:203.0.113.9" }))).toBe("203.0.113.9");
+    expect(clientIp(request({ "x-forwarded-for": "2001:DB8::1" }))).toBe("2001:db8::1");
+    expect(clientIp(request({ "x-forwarded-for": "not-an-ip" }))).toBeNull();
+    expect(clientIp(request({ "x-forwarded-for": "a".repeat(5000) }))).toBeNull();
+  });
+});
+
+describe("loopback helpers", () => {
+  it("recognizes loopback addresses only", () => {
+    expect(isLoopbackIp("127.0.0.1")).toBe(true);
+    expect(isLoopbackIp("127.1.2.3")).toBe(true);
+    expect(isLoopbackIp("::1")).toBe(true);
+    expect(isLoopbackIp("::ffff:127.0.0.1")).toBe(true);
+    expect(isLoopbackIp("192.168.1.20")).toBe(false);
+    expect(isLoopbackIp("localhost")).toBe(false);
+    expect(isLoopbackIp(null)).toBe(false);
+  });
+
+  it("requires every X-Forwarded-For entry to be loopback", () => {
+    const headers = (value?: string) => new Headers(value ? { "x-forwarded-for": value } : {});
+    expect(forwardedChainIsLoopback(headers())).toBe(true);
+    expect(forwardedChainIsLoopback(headers("::1"))).toBe(true);
+    expect(forwardedChainIsLoopback(headers("127.0.0.1, ::1"))).toBe(true);
+    expect(forwardedChainIsLoopback(headers("192.168.1.20"))).toBe(false);
+    expect(forwardedChainIsLoopback(headers("127.0.0.1, 192.168.1.20"))).toBe(false);
   });
 });

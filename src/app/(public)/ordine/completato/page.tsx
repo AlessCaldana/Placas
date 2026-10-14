@@ -6,15 +6,20 @@ import { Icon } from "@/components/ui/Icon";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getRequestLocale } from "@/lib/locale";
 import { getStripe, isStripeConfigured } from "@/lib/payments/stripe";
+import { isKnownCheckoutSession } from "@/lib/services/orders";
 import { getReviewEligibility, type ReviewEligibility } from "@/lib/services/reviews";
 import { getOrderNumberForSession } from "@/lib/services/shipments";
+import { isCheckoutSessionId } from "@/lib/validators/review";
 import { translate } from "@/messages";
 
 export const metadata = { robots: { index: false, follow: false } };
 
 async function isSessionPaid(sessionId: string | undefined): Promise<boolean> {
-  if (!sessionId || !/^cs_[A-Za-z0-9_]+$/.test(sessionId) || !isStripeConfigured()) return false;
+  // Same format and length cap as the database column (cs_..., at most 255 chars).
+  if (!isCheckoutSessionId(sessionId) || !isStripeConfigured() || !isDatabaseConfigured()) return false;
   try {
+    // Only sessions created by our checkout (stored on an order) reach Stripe.
+    if (!(await isKnownCheckoutSession(sessionId))) return false;
     const session = await getStripe().checkout.sessions.retrieve(sessionId);
     return session.payment_status === "paid";
   } catch {

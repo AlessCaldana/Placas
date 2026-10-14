@@ -48,3 +48,6 @@ next-env.d.ts
 
 # uploaded test product images
 /public/uploads/products/
+
+# site settings uploads (logo, etc.)
+/public/uploads/settings/

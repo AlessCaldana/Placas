@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
-import { bufferRequestWithinProductImageLimit } from "@/lib/product-images";
-import { clientKey, createRateLimiter } from "@/lib/rate-limit";
+import { UNKNOWN_CLIENT, clientIp, createRateLimiter } from "@/lib/rate-limit";
+import { readBoundedJson } from "@/lib/request-body";
 import { lookupOrderTracking } from "@/lib/services/shipments";
 import { parseTrackingLookupInput } from "@/lib/validators/shipment";
 import { isCrossOriginRequest } from "@/lib/request-origin";
@@ -10,8 +10,11 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 2 * 1024;
 // Every lookup counts, found or not, so order numbers cannot be guessed:
-// 10 per IP every 15 minutes.
-const lookupLimiter = createRateLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
+// 10 per IP every 15 minutes. Clients whose IP cannot be trusted (no
+// TRUSTED_PROXY_HOPS) share one bucket of 60.
+const PER_IP_MAX = 10;
+const UNKNOWN_IP_MAX = 60;
+const lookupLimiter = createRateLimiter({ max: UNKNOWN_IP_MAX, windowMs: 15 * 60 * 1000 });
 const NO_STORE = { "Cache-Control": "no-store" };
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
@@ -22,24 +25,18 @@ export async function POST(request: Request) {
   if (isCrossOriginRequest(request)) return json({ error: "invalid_request" }, 403);
   if (!isDatabaseConfigured()) return json({ error: "database_not_configured" }, 503);
 
-  const key = clientKey(request);
-  const retryAfter = lookupLimiter.retryAfterSeconds(key);
+  const ip = clientIp(request);
+  const key = ip ?? UNKNOWN_CLIENT;
+  const retryAfter = lookupLimiter.retryAfterSeconds(key, Date.now(), ip ? PER_IP_MAX : UNKNOWN_IP_MAX);
   if (retryAfter > 0) {
     return json({ error: "too_many_requests" }, 429, { "Retry-After": String(retryAfter) });
   }
   lookupLimiter.register(key);
 
   // Stops reading as soon as the body exceeds the limit.
-  const bounded = await bufferRequestWithinProductImageLimit(request, MAX_BODY_BYTES);
-  const text = bounded ? await bounded.text().catch(() => null) : null;
-  if (text === null || text.length > MAX_BODY_BYTES) return json({ error: "invalid_request" }, 400);
-  let body: unknown = null;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    body = null;
-  }
-  const input = parseTrackingLookupInput(body);
+  const read = await readBoundedJson(request, MAX_BODY_BYTES);
+  if (!read.ok) return json({ error: read.error }, read.error === "request_too_large" ? 413 : 400);
+  const input = parseTrackingLookupInput(read.value);
   if (!input) return json({ error: "invalid_request" }, 400);
 
   try {

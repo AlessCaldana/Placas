@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { canManageUsers, isAdminAuthRequired, requireAdminPage } from "@/lib/admin-auth";
+import { canManageUsers, requireAdminPage } from "@/lib/admin-auth";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 import "./admin.css";
 
@@ -28,7 +28,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     .then((settings) => settings.name)
     .catch(() => defaultSiteSettings().name);
   return (
-    <AdminShell showLogout={isAdminAuthRequired()} shopName={shopName} user={user}>
+    // Only the local development identity (ADMIN_AUTH=off on this machine) has no session to close.
+    <AdminShell showLogout={!identity.dev} shopName={shopName} user={user}>
       {children}
     </AdminShell>
   );

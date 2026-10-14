@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { adminUserErrorResponse } from "@/lib/admin-user-errors";
 import { isDatabaseConfigured } from "@/lib/db";
+import { BODY_LIMITS, bodyErrorResponse, readBoundedJson } from "@/lib/request-body";
 import { isCrossOriginRequest } from "@/lib/request-origin";
 import { updateAdminUser } from "@/lib/services/admin-users";
 import { parseUpdateAdminUserInput } from "@/lib/validators/admin-user";
@@ -26,7 +27,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
-  const parsed = parseUpdateAdminUserInput(await request.json().catch(() => null));
+  const read = await readBoundedJson(request, BODY_LIMITS.smallJson);
+  if (!read.ok) return bodyErrorResponse(read.error);
+  const parsed = parseUpdateAdminUserInput(read.value);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   try {

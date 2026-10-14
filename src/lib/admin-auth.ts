@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import {
@@ -25,7 +25,8 @@ export { ADMIN_SESSION_COOKIE, isAdminAuthRequired };
 /**
  * Who is using the panel.
  * - Real account: a row of admin_users (dev = false, bootstrap = false).
- * - dev: local development with login off (no ADMIN_AUTH=on); full access.
+ * - dev: local development with ADMIN_AUTH=off, from this machine only (see
+ *   isAdminAuthRequired in src/lib/admin-session.ts); full access.
  * - bootstrap: signed in with ADMIN_EMAIL/ADMIN_PASSWORD while no account exists.
  * Only real accounts can change their own password.
  */
@@ -164,10 +165,11 @@ export function canManageUsers(identity: AdminIdentity): boolean {
 /**
  * Current panel identity for Server Components and Server Functions, or null
  * when not signed in (or the session is no longer valid). In local development
- * with login off it returns DEV_ADMIN_IDENTITY. Memoized per request.
+ * with ADMIN_AUTH=off, from this machine, it returns DEV_ADMIN_IDENTITY.
+ * Memoized per request.
  */
 export const getCurrentAdmin = cache(async (): Promise<AdminIdentity | null> => {
-  if (!isAdminAuthRequired()) return { ...DEV_ADMIN_IDENTITY };
+  if (!isAdminAuthRequired(await headers())) return { ...DEV_ADMIN_IDENTITY };
   const cookieStore = await cookies();
   try {
     return await resolveAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
@@ -200,7 +202,7 @@ export async function requireAdmin(
   options: { role?: AdminRoleName } = {},
 ): Promise<AdminIdentity | NextResponse> {
   let identity: AdminIdentity | null;
-  if (!isAdminAuthRequired()) {
+  if (!isAdminAuthRequired(request.headers)) {
     identity = { ...DEV_ADMIN_IDENTITY };
   } else {
     try {
