@@ -10,6 +10,7 @@ import {
   type PointerEvent,
 } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { HeroStripes } from "@/components/public/HeroStripes";
 import type { HeroProduct } from "@/lib/services/products";
 import { translate, type Locale } from "@/messages";
 
@@ -124,6 +125,7 @@ export function HeroCarousel({
       onFocus={() => setFocused(true)}
       onBlur={onBlur}
     >
+      <HeroStripes />
       <div className="hero-carousel-stage" aria-live={playing ? "off" : "polite"}>
         {products.map((product, index) => {
           const isCurrent = index === current;

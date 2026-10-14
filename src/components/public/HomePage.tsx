@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import { HeroCarousel } from "@/components/public/HeroCarousel";
+import { HeroStripes } from "@/components/public/HeroStripes";
 import { ProductCard } from "@/components/public/ProductCard";
 import { ProductDetailsDialog } from "@/components/public/ProductDetailsDialog";
 import { ReviewsSection } from "@/components/public/ReviewsSection";
@@ -106,6 +107,7 @@ export function HomePage({
   return (
     <>
       <section className={heroProducts.length ? "hero has-carousel" : "hero"}>
+        {heroProducts.length === 0 && <HeroStripes standalone />}
         <div className="hero-content">
           <div className="hero-copy">
             <div className="eyebrow light"><span /> {t("hero.eyebrow")}</div>

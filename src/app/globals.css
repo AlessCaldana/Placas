@@ -15,6 +15,8 @@
   --orange: #c4602f;
   --ff-sans: "DM Sans Variable", "DM Sans", system-ui, sans-serif;
   --ff-serif: "Instrument Serif", Georgia, serif;
+  /* Display anni '70 del titolo della portada (cargada solo en la home). */
+  --ff-display: "Shrikhand", "Cooper Black", Georgia, serif;
 }
 
 @theme inline {
@@ -351,6 +353,10 @@ body:has(.hero) .public-header {
 .hero {
   --hero-brick: #b8432a;
   --hero-wine: #7a2230;
+  --hero-mustard: #e0a526;
+  --hero-brown: #5a3220;
+  /* Tamaño de las rayas 70 (el SVG se dibuja a 2400×1600 px en escritorio). */
+  --stripe-scale: 1;
   position: relative;
   min-height: min(780px, 92vh);
   display: flex;
@@ -359,7 +365,6 @@ body:has(.hero) .public-header {
   overflow: hidden;
   isolation: isolate;
   background:
-    repeating-linear-gradient(135deg, #ffffff07 0 1px, transparent 1px 7px),
     radial-gradient(70% 60% at 0% 100%, #5e1a26cc 0, transparent 70%),
     linear-gradient(215deg, var(--hero-brick) 0%, #9a3329 48%, var(--hero-wine) 100%);
 }
@@ -372,31 +377,23 @@ body:has(.hero) .public-header {
   background: linear-gradient(to bottom, transparent, #4a121c40);
   pointer-events: none;
 }
-/* Aros dorados detrás de las placas (o a la derecha si no hay carrusel). */
-.hero:before {
-  content: "";
+/*
+ * Rayas anni '70 (crema, mostaza, naranja, marrón): suben desde el borde inferior a la
+ * izquierda del carrusel, doblan hacia la derecha y pasan por detrás de las placas.
+ */
+.hero-stripes {
   position: absolute;
   z-index: -1;
-  right: -8%;
-  top: 50%;
-  width: 62vmin;
-  height: 62vmin;
-  border: 1px solid #f0cf8540;
-  border-radius: 50%;
-  transform: translateY(-50%);
-  box-shadow:
-    0 0 0 7vmin #f0cf8512,
-    0 0 0 14vmin #f0cf850a;
+  left: -16px;
+  top: calc(var(--plate-width) * 0.5);
+  width: calc(2400px * var(--stripe-scale));
+  height: calc(1600px * var(--stripe-scale));
   pointer-events: none;
 }
-.hero.has-carousel:before {
-  right: auto;
-  left: 74%;
-  top: 52%;
-  width: 46vmin;
-  height: 46vmin;
-  transform: translate(-50%, -50%);
-  border-color: #f0cf8538;
+/* Sin carrusel: a la derecha del texto. */
+.hero-stripes.is-standalone {
+  left: 62%;
+  top: 30%;
 }
 .hero-content {
   position: relative;
@@ -414,20 +411,24 @@ body:has(.hero) .public-header {
 .hero-copy {
   min-width: 0;
 }
+/* Titolo in stile anni '70: display grassa e morbida con ombra piena spostata. */
 .hero h1 {
-  font-family: var(--ff-serif);
+  font-family: var(--ff-display);
   font-weight: 400;
-  font-size: clamp(58px, 6.5vw, 100px);
-  line-height: 0.92;
-  margin: 0 0 28px;
-  letter-spacing: -0.025em;
-  text-shadow: 0 2px 24px #4a121c40;
+  font-synthesis: none;
+  font-size: clamp(48px, 5.6vw, 84px);
+  line-height: 1.04;
+  margin: 0 0 26px;
+  letter-spacing: 0;
+  overflow-wrap: break-word;
+  text-shadow: 0.05em 0.05em 0 var(--hero-brown);
 }
 .hero.has-carousel h1 {
-  font-size: clamp(54px, 5.8vw, 92px);
+  font-size: clamp(44px, 4.8vw, 68px);
 }
 .hero h1 em {
-  color: var(--gold-2);
+  font-style: normal;
+  color: #f5bd45;
 }
 .hero .eyebrow.light {
   color: #fff6e8;
@@ -447,12 +448,16 @@ body:has(.hero) .public-header {
   gap: 12px;
   margin-top: 36px;
 }
-/* Sobre el rojo, el oro claro contrasta más que el oro de la marca. */
+/* Mostaza anni '70 con ombra piena marrone (testo scuro: contrasto 6,5:1). */
 .hero .btn-gold,
 body:has(.hero) .public-header .btn-gold {
-  background: var(--gold-2);
+  background: var(--hero-mustard, #e0a526);
   color: var(--ink);
-  box-shadow: 0 8px 22px #4a121c47;
+  box-shadow: 3px 3px 0 #5a3220;
+}
+.hero .btn-gold:hover,
+body:has(.hero) .public-header .btn-gold:hover {
+  background: #eab33c;
 }
 .hero .btn-light {
   border-color: #ffffffb8;
@@ -574,8 +579,9 @@ body:has(.hero) .public-header .nav-links a:hover {
   outline: 3px solid var(--gold-2);
   outline-offset: 5px;
 }
+/* Deja libre el tramo vertical de las rayas a la izquierda (texto claro sobre fondo rojo). */
 .hero-carousel-caption {
-  width: min(100%, 360px);
+  width: min(100% - 2 * (90px * var(--stripe-scale) - 8px), 360px);
   min-height: 2.8em;
   margin: 10px 0 0;
   text-align: center;
@@ -616,7 +622,8 @@ body:has(.hero) .public-header .nav-links a:hover {
   padding: 0;
   border: 1px solid #ffffff8c;
   border-radius: 50%;
-  background: #4a121c33;
+  /* Fondo casi opaco: las flechas pueden quedar sobre las rayas 70. */
+  background: #4a121cb3;
   color: var(--white);
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
@@ -1488,8 +1495,11 @@ footer {
     gap: 34px;
     padding-bottom: 96px;
   }
-  .hero.has-carousel:before {
-    display: none;
+  .hero {
+    --stripe-scale: 0.72;
+  }
+  .hero.has-carousel h1 {
+    font-size: clamp(44px, 7vw, 60px);
   }
   .hero-carousel {
     --plate-width: clamp(160px, 44vw, 220px);
@@ -1588,9 +1598,16 @@ footer {
   .hero-content {
     padding: 120px 24px 100px;
   }
+  .hero {
+    --stripe-scale: 0.58;
+  }
   .hero h1,
   .hero.has-carousel h1 {
-    font-size: 54px;
+    font-size: clamp(38px, 12.2vw, 52px);
+  }
+  .hero-stripes.is-standalone {
+    left: 52%;
+    top: calc(100% - 110px);
   }
   .hero-copy > p {
     font-size: 15px;
