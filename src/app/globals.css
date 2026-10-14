@@ -70,14 +70,23 @@ a {
   color: var(--ink);
   border-bottom: 1px solid var(--line);
 }
+/*
+ * Portada: barra marrón oscuro sólida y, debajo, dos rayas 70 finas (mostaza y naranja)
+ * que la separan del rojo del hero. Las rayas son parte del header (padding-bottom).
+ */
 body:has(.hero) .public-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: transparent;
+  --header-brown: #3d2216;
+  --header-stripes: 11px;
+  padding-bottom: var(--header-stripes);
+  border-bottom: 0;
   color: var(--white);
-  border-bottom-color: #ffffff2b;
+  background: linear-gradient(
+    to top,
+    #e8833a 0 4px,
+    var(--header-brown) 4px 7px,
+    #e0a526 7px var(--header-stripes),
+    var(--header-brown) var(--header-stripes)
+  );
 }
 .nav-wrap {
   max-width: 1400px;
@@ -358,7 +367,8 @@ body:has(.hero) .public-header {
   /* Tamaño de las rayas 70 (el SVG se dibuja a 2400×1600 px en escritorio). */
   --stripe-scale: 1;
   position: relative;
-  min-height: min(780px, 92vh);
+  /* El header (88px + 11px de rayas) ya no se superpone: se descuenta de la altura. */
+  min-height: min(680px, calc(92vh - 99px));
   display: flex;
   align-items: center;
   color: var(--white);
@@ -400,7 +410,7 @@ body:has(.hero) .public-header {
   width: 100%;
   max-width: 1300px;
   margin: auto;
-  padding: 150px 34px 120px;
+  padding: 62px 34px 120px;
 }
 .hero.has-carousel .hero-content {
   display: grid;
@@ -455,6 +465,10 @@ body:has(.hero) .public-header .btn-gold {
   color: var(--ink);
   box-shadow: 3px 3px 0 #5a3220;
 }
+/* Sobre el marrón del header la sombra marrón no se vería: una más oscura. */
+body:has(.hero) .public-header .btn-gold {
+  box-shadow: 3px 3px 0 #1c0e08;
+}
 .hero .btn-gold:hover,
 body:has(.hero) .public-header .btn-gold:hover {
   background: #eab33c;
@@ -476,7 +490,10 @@ body:has(.hero) .public-header .nav-links a:hover {
 
 /* ---------- Carrusel de placas del hero ---------- */
 .hero-carousel {
+  /* Ancho de una placa vertical 2:3; la caja fija del escenario se calcula a partir de él. */
   --plate-width: clamp(220px, 22vw, 300px);
+  --stage-width: calc(var(--plate-width) * 1.5);
+  --stage-height: calc(var(--plate-width) * 1.5);
   position: relative;
   display: grid;
   justify-items: center;
@@ -497,20 +514,30 @@ body:has(.hero) .public-header .nav-links a:hover {
   background: radial-gradient(closest-side, #f6c86a66, #f0b85a24 55%, transparent);
   pointer-events: none;
 }
+/*
+ * Caja fija: no cambia de tamaño entre placas (ni el layout, ni las rayas, ni las flechas).
+ * Cada tarjeta tiene la forma de su foto (--plate-ratio = ancho / alto) y se centra en la
+ * caja: las verticales llenan el alto, las horizontales el ancho.
+ */
 .hero-carousel-stage {
   position: relative;
-  width: var(--plate-width);
-  aspect-ratio: 2 / 3;
-  margin-right: 6%;
+  width: var(--stage-width);
+  height: var(--stage-height);
+  container-type: size;
 }
 .hero-slide {
   position: absolute;
   inset: 0;
+  margin: auto;
+  width: min(100cqw, 100cqh * var(--plate-ratio));
+  height: min(100cqh, 100cqw / var(--plate-ratio));
   transform-origin: 50% 0;
   transition:
     transform 0.8s cubic-bezier(0.22, 0.75, 0.25, 1),
     opacity 0.6s ease,
-    filter 0.8s ease;
+    filter 0.8s ease,
+    width 0.45s ease,
+    height 0.45s ease;
 }
 .hero-slide.is-current {
   z-index: 4;
@@ -563,17 +590,20 @@ body:has(.hero) .public-header .nav-links a:hover {
   box-shadow: 0 0 0 1px #00000026 inset;
   pointer-events: none;
 }
+/* La tarjeta ya tiene la forma de la foto: cover no recorta la placa. */
 .hero-plate img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* Recorta un poco los bordes (dedos en las fotos de móvil). */
-  transform: scale(1.06);
-  transition: transform 0.6s ease;
+  transition: filter 0.3s ease;
+}
+/* Hasta conocer su forma, la foto se ve entera en la tarjeta provisional. */
+.hero-plate:not(.is-measured) img {
+  object-fit: contain;
 }
 .hero-slide.is-current .hero-plate:hover img {
-  transform: scale(1.1);
+  filter: brightness(1.06);
 }
 .hero-plate:focus-visible {
   outline: 3px solid var(--gold-2);
@@ -1503,9 +1533,11 @@ footer {
   }
   .hero-carousel {
     --plate-width: clamp(160px, 44vw, 220px);
+    /* En móvil la placa horizontal ocupa casi todo el ancho (deja sitio a la pila). */
+    --stage-width: min(100% - 28px, var(--plate-width) * 2.1);
   }
   .hero-carousel-stage {
-    margin-right: 10%;
+    margin-right: 28px;
   }
 }
 @media (max-width: 1050px) {
@@ -1566,6 +1598,12 @@ footer {
   .nav-links.open {
     display: flex;
   }
+  /* Portada: el menú se abre debajo de las rayas, en el mismo marrón del header. */
+  body:has(.hero) .public-header .nav-links {
+    top: 100%;
+    background: var(--header-brown);
+    box-shadow: 0 18px 30px #1c0e0866;
+  }
   .nav-links .nav-reserved-mobile {
     display: block;
     border-top: 1px solid #ffffff24;
@@ -1596,7 +1634,7 @@ footer {
     display: block;
   }
   .hero-content {
-    padding: 120px 24px 100px;
+    padding: 48px 24px 100px;
   }
   .hero {
     --stripe-scale: 0.58;

@@ -5,6 +5,7 @@ import {
   useEffect,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type FocusEvent,
   type KeyboardEvent,
   type PointerEvent,
@@ -18,6 +19,23 @@ import { translate, type Locale } from "@/messages";
 const slideInterval = 4200;
 /** Plates whose photo is requested ahead of time: the front one and the two behind it. */
 const preloadAhead = 2;
+
+/**
+ * Each card takes the shape of its photo (width / height), so the photo fills it with
+ * `cover` without cutting the plate. Kept within this range so no card becomes a sliver.
+ */
+const minRatio = 0.55;
+const maxRatio = 2.4;
+/** Shape used until the photo has loaded (the photo is shown whole meanwhile). */
+const defaultRatio = 2 / 3;
+
+function photoRatio(image: HTMLImageElement): number | null {
+  const { naturalWidth, naturalHeight } = image;
+  if (!naturalWidth || !naturalHeight) return null;
+  const ratio = Math.min(maxRatio, Math.max(minRatio, naturalWidth / naturalHeight));
+  // Rounded so re-measuring the same photo never triggers a new render.
+  return Math.round(ratio * 1000) / 1000;
+}
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
@@ -72,6 +90,8 @@ export function HeroCarousel({
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [stopped, setStopped] = useState(false);
+  // Shape of each photo, known once it has loaded.
+  const [ratios, setRatios] = useState<Record<string, number>>({});
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotion, getServerReducedMotion);
   const pageVisible = useSyncExternalStore(subscribeVisibility, getPageVisible, getServerPageVisible);
   const canAutoplay = count > 1 && !reducedMotion;
@@ -95,6 +115,12 @@ export function HeroCarousel({
     const timer = window.setTimeout(() => show(current + 1), slideInterval);
     return () => window.clearTimeout(timer);
   }, [playing, current, show]);
+
+  const measure = useCallback((id: string, image: HTMLImageElement | null) => {
+    if (!image?.complete) return;
+    const ratio = photoRatio(image);
+    if (ratio) setRatios((known) => (known[id] === ratio ? known : { ...known, [id]: ratio }));
+  }, []);
 
   if (!count) return null;
 
@@ -129,10 +155,12 @@ export function HeroCarousel({
       <div className="hero-carousel-stage" aria-live={playing ? "off" : "polite"}>
         {products.map((product, index) => {
           const isCurrent = index === current;
+          const ratio = ratios[product.id];
           return (
             <div
               key={product.id}
               className={`hero-slide ${slideState(index, current, count)}`}
+              style={{ "--plate-ratio": ratio ?? defaultRatio } as CSSProperties}
               role="group"
               aria-roledescription={t("hero.carousel.slide")}
               aria-label={t("product.position").replace("{n}", String(index + 1)).replace("{total}", String(count))}
@@ -140,7 +168,7 @@ export function HeroCarousel({
               inert={!isCurrent}
             >
               <button
-                className="hero-plate"
+                className={ratio ? "hero-plate is-measured" : "hero-plate"}
                 type="button"
                 onClick={() => onSelect(product)}
                 aria-label={t("hero.carousel.open").replace("{name}", product.name)}
@@ -153,6 +181,9 @@ export function HeroCarousel({
                     fetchPriority={index === 0 ? "high" : "low"}
                     decoding="async"
                     draggable={false}
+                    // The ref covers photos already loaded before hydration (no load event then).
+                    ref={(image) => measure(product.id, image)}
+                    onLoad={(event) => measure(product.id, event.currentTarget)}
                   />
                 )}
               </button>
