@@ -3,6 +3,7 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { bufferRequestWithinProductImageLimit } from "@/lib/product-images";
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
 import { createReview, parseReviewInput } from "@/lib/services/reviews";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -10,18 +11,8 @@ const MAX_BODY_BYTES = 8 * 1024;
 // Every submission counts, valid or not: 5 per IP every 15 minutes.
 const submitLimiter = createRateLimiter({ max: 5, windowMs: 15 * 60 * 1000 });
 
-function isCrossOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    return new URL(origin).host !== new URL(request.url).host;
-  } catch {
-    return true;
-  }
-}
-
 export async function POST(request: Request) {
-  if (isCrossOrigin(request)) {
+  if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
   if (!isDatabaseConfigured()) {

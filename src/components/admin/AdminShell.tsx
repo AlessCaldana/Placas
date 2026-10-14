@@ -7,8 +7,21 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { BrandSeal } from "@/components/ui/BrandSeal";
 import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
 import { useLocale } from "@/components/ui/LocaleProvider";
+import type { AdminRoleName } from "@/lib/validators/admin-user";
+import { roleLabelKey } from "./admin-user-ui";
 
-const items: { href: string; label: string; icon: IconName }[] = [
+type NavItem = { href: string; label: string; icon: IconName };
+
+/** Signed-in identity shown in the sidebar (no email or id needed here). */
+export type AdminShellUser = {
+  name: string;
+  role: AdminRoleName;
+  dev: boolean;
+  bootstrap: boolean;
+  canManageUsers: boolean;
+};
+
+const items: NavItem[] = [
   { href: "/admin/dashboard", label: "admin.nav.dashboard", icon: "home" },
   { href: "/admin/prodotti", label: "admin.nav.products", icon: "box" },
   { href: "/admin/categorie", label: "admin.nav.categories", icon: "category" },
@@ -18,12 +31,31 @@ const items: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/spedizioni", label: "admin.nav.shipments", icon: "truck" },
   { href: "/admin/impostazioni", label: "admin.nav.settings", icon: "settings" },
 ];
+const usersItem: NavItem = { href: "/admin/utenti", label: "admin.nav.users", icon: "users" };
+const accountItem: NavItem = { href: "/admin/account", label: "admin.nav.account", icon: "user" };
 
-export function AdminShell({ children, showLogout, shopName }: { children: ReactNode; showLogout: boolean; shopName: string }) {
+export function AdminShell({
+  children,
+  showLogout,
+  shopName,
+  user,
+}: {
+  children: ReactNode;
+  showLogout: boolean;
+  shopName: string;
+  user: AdminShellUser;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const { t } = useLocale();
+  const navItems = user.canManageUsers ? [...items, usersItem, accountItem] : [...items, accountItem];
+  const userName = user.dev
+    ? t("admin.identity.devName")
+    : user.bootstrap
+      ? t("admin.identity.bootstrapName")
+      : user.name;
+  const userRole = user.dev ? t("admin.identity.devRole") : t(roleLabelKey(user.role));
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
@@ -43,7 +75,7 @@ export function AdminShell({ children, showLogout, shopName }: { children: React
         </Link>
         <nav aria-label={t("admin.menu")}>
           <small>{t("admin.menu")}</small>
-          {items.map((item) => {
+          {navItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
@@ -60,6 +92,16 @@ export function AdminShell({ children, showLogout, shopName }: { children: React
           })}
         </nav>
         <div className="side-bottom">
+          <p className="admin-identity">
+            <span className="admin-identity-icon">
+              <Icon name="user" size={17} />
+            </span>
+            <span className="admin-identity-text">
+              <span className="sr-only">{t("admin.identity.label")}: </span>
+              <b>{userName}</b>
+              <small>{userRole}</small>
+            </span>
+          </p>
           <LocaleSwitcher />
           <Link href="/" className="admin-public-link">
             <Icon name="arrow" size={19} />

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Brand } from "./Brand";
 import { getRequestLocale } from "@/lib/locale";
 import { translate } from "@/messages";
-import { whatsappLink } from "@/lib/site";
+import { whatsappGreeting, whatsappLink } from "@/lib/site";
 import type { SiteSettings } from "@/lib/services/site-settings";
 import { legalDocumentIds, legalRoutes } from "./legal-routes";
 
@@ -36,7 +36,7 @@ export async function Footer({ settings }: { settings: SiteSettings }) {
         </div>
         <div>
           <b>{translate(locale, "footer.contacts")}</b>
-          <a href={whatsappLink(undefined, settings.whatsappNumber)} target="_blank" rel="noopener noreferrer">
+          <a href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} target="_blank" rel="noopener noreferrer">
             WhatsApp
           </a>
           {settings.phone && <a href={`tel:${settings.phone.replace(/[^+\d]/g, "")}`}>{settings.phone}</a>}

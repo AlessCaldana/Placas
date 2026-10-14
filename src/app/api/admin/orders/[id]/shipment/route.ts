@@ -5,6 +5,7 @@ import { bufferRequestWithinProductImageLimit } from "@/lib/product-images";
 import { clearOrderShipment, markOrderShipped } from "@/lib/services/shipments";
 import { isUuid } from "@/lib/validators/review";
 import { parseShipmentInput } from "@/lib/validators/shipment";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -15,16 +16,6 @@ function enabled() {
 }
 
 // Defence in depth on top of the SameSite session cookie.
-function isCrossOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    return new URL(origin).host !== new URL(request.url).host;
-  } catch {
-    return true;
-  }
-}
-
 async function readJsonBody(request: Request): Promise<unknown> {
   // Stops reading as soon as the body exceeds the limit.
   const bounded = await bufferRequestWithinProductImageLimit(request, MAX_BODY_BYTES);
@@ -37,10 +28,10 @@ async function guard(
   request: Request,
   params: Promise<{ id: string }>,
 ): Promise<{ id: string } | { response: NextResponse }> {
-  if (isCrossOrigin(request)) {
+  if (isCrossOriginRequest(request)) {
     return { response: NextResponse.json({ error: "invalid_request" }, { status: 403 }) };
   }
-  const denied = rejectWithoutAdminSession(request);
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return { response: denied };
   if (!enabled()) return { response: NextResponse.json({ error: "not_found" }, { status: 404 }) };
   if (!isDatabaseConfigured()) {

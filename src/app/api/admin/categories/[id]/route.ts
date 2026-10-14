@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { rejectWithoutAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { deleteAdminCategory, setAdminCategoryActive } from "@/lib/services/categories";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,10 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const denied = rejectWithoutAdminSession(request);
+  if (isCrossOriginRequest(request)) {
+    return NextResponse.json({ error: "invalid_request" }, { status: 403 });
+  }
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {
@@ -39,7 +43,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const denied = rejectWithoutAdminSession(request);
+  if (isCrossOriginRequest(request)) {
+    return NextResponse.json({ error: "invalid_request" }, { status: 403 });
+  }
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {

@@ -12,7 +12,7 @@ import { SearchBar } from "@/components/public/SearchBar";
 import type { PublicCatalogCategory } from "@/lib/services/categories";
 import type { PublicCatalogProduct } from "@/lib/services/products";
 import type { PublicReview } from "@/lib/services/reviews";
-import { whatsappLink } from "@/lib/site";
+import { whatsappGreeting, whatsappLink } from "@/lib/site";
 import { categoryMessageKey, translate } from "@/messages";
 import { matchesMultilingualSearch } from "@/lib/search";
 import { canChangeCartQuantity } from "@/lib/cart";
@@ -61,7 +61,7 @@ export function HomePage({
   const showFeatured = !isFiltering && !showAllProducts && featuredProducts.length < products.length;
   const visibleProducts = showFeatured ? featuredProducts : products.filter((product) =>
     (!selectedCategory || product.categoryIds.includes(selectedCategory)) &&
-    matchesMultilingualSearch(query, product.name, product.path),
+    matchesMultilingualSearch(query, product.searchText, product.path),
   );
   // The dialog arrows browse the products currently listed (featured, category or search results).
   const selectedIndex = selectedProduct ? visibleProducts.findIndex((product) => product.id === selectedProduct.id) : -1;
@@ -102,7 +102,7 @@ export function HomePage({
           <p>{t("hero.text")}</p>
           <div className="hero-buttons">
             <ButtonLink href="/#catalogo" kind="gold" icon="arrow">{t("cta.catalog")}</ButtonLink>
-            <ButtonLink href={whatsappLink(undefined, settings.whatsappNumber)} kind="light" icon="chat">{t("cta.whatsapp")}</ButtonLink>
+            <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="light" icon="chat">{t("cta.whatsapp")}</ButtonLink>
           </div>
         </div>
       </section>
@@ -209,6 +209,7 @@ export function HomePage({
           quantityInCart={cartItems.find((item) => item.product.id === selectedProduct.id)?.quantity ?? 0}
           onClose={() => setSelectedProduct(null)}
           onAddToCart={() => addToCart(selectedProduct)}
+          whatsappHref={whatsappLink(whatsappGreeting(t, settings.name, selectedProduct), settings.whatsappNumber)}
           {...(selectedIndex >= 0 && {
             position: { index: selectedIndex, total: visibleProducts.length },
             onPrevious: () => setSelectedProduct(visibleProducts[(selectedIndex - 1 + visibleProducts.length) % visibleProducts.length]),
@@ -244,7 +245,7 @@ export function HomePage({
         <div><div className="eyebrow light"><span /> {t("contact.eyebrow")}</div>
           <h2>{t("contact.title1")}<br />{t("contact.title2")}</h2></div>
         <div><p>{t("contact.text")}</p>
-          <ButtonLink href={whatsappLink(undefined, settings.whatsappNumber)} kind="gold" icon="chat">{t("cta.whatsapp")}</ButtonLink></div>
+          <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="gold" icon="chat">{t("cta.whatsapp")}</ButtonLink></div>
       </section>
     </>
   );

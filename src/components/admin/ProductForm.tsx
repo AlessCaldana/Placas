@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
+import { languages as localeLanguages } from "@/components/ui/LocaleSwitcher";
 import { initialCategories, nextCatId, type Cat, type NewCat } from "@/lib/categories";
 import { categoryMessageKey } from "@/messages";
 import type { AdminProductDetails } from "@/lib/services/products";
@@ -18,6 +26,15 @@ import {
   saveProductOptionPreferences,
   subscribeToProductOptions,
 } from "@/lib/product-options";
+import {
+  emptyProductTranslations,
+  productTranslationDescriptionMaxLength,
+  productTranslationLocales,
+  productTranslationNameMaxLength,
+  type ProductTranslationLocale,
+  type ProductTranslationText,
+  type ProductTranslations,
+} from "@/lib/product-translations";
 import { CategoryDialog, type CategoryDialogHandle } from "./CategoryDialog";
 
 const states = [
@@ -100,6 +117,12 @@ export function ProductForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteError, setDeleteError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const [translations, setTranslations] = useState<ProductTranslations>(
+    () => initialProduct?.translations ?? emptyProductTranslations(),
+  );
+  const [translationLocale, setTranslationLocale] = useState<ProductTranslationLocale>(
+    productTranslationLocales[0],
+  );
   const dialog = useRef<CategoryDialogHandle>(null);
   const optionDialog = useRef<HTMLDialogElement>(null);
   const deleteDialog = useRef<HTMLDialogElement>(null);
@@ -128,6 +151,35 @@ export function ProductForm({
       delete next[name];
       return next;
     });
+  }
+
+  function updateTranslation(
+    locale: ProductTranslationLocale,
+    field: keyof ProductTranslationText,
+    text: string,
+  ) {
+    setTranslations((current) => ({
+      ...current,
+      [locale]: { ...current[locale], [field]: text },
+    }));
+  }
+
+  function translationTabId(locale: ProductTranslationLocale) {
+    return `product-translation-tab-${locale}`;
+  }
+
+  function onTranslationTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const items = productTranslationLocales;
+    const index = items.indexOf(translationLocale);
+    let next: ProductTranslationLocale | null = null;
+    if (event.key === "ArrowRight") next = items[(index + 1) % items.length];
+    else if (event.key === "ArrowLeft") next = items[(index - 1 + items.length) % items.length];
+    else if (event.key === "Home") next = items[0];
+    else if (event.key === "End") next = items[items.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    setTranslationLocale(next);
+    document.getElementById(translationTabId(next))?.focus();
   }
 
   function addCategory(c: NewCat) {
@@ -242,6 +294,16 @@ export function ProductForm({
       quantity: value("qty"),
       material: value("material"),
       status: selectedStatus.toLocaleUpperCase("en"),
+      // Always send all four languages with both fields: a missing field would clear it.
+      translations: Object.fromEntries(
+        productTranslationLocales.map((locale) => [
+          locale,
+          {
+            name: translations[locale].name.trim(),
+            description: translations[locale].description.trim(),
+          },
+        ]),
+      ) as ProductTranslations,
     };
     const requestBody = new FormData();
     requestBody.set("product", JSON.stringify(product));
@@ -284,6 +346,8 @@ export function ProductForm({
         form.reset();
         setCategory("");
         setSub("");
+        setTranslations(emptyProductTranslations());
+        setTranslationLocale(productTranslationLocales[0]);
       }
       setSaveMessage(t("admin.form.saveSuccess"));
     } catch {
@@ -512,6 +576,75 @@ export function ProductForm({
               {t("admin.form.material")}
                 <input name="material" placeholder="Es. Alluminio" defaultValue={initialProduct?.material} />
             </label>
+          </section>
+
+          <section className="admin-card form-card" aria-labelledby="product-translations-title">
+            <h2 id="product-translations-title">{t("admin.form.translations")}</h2>
+            <p>{t("admin.form.translationsHint")}</p>
+            <div
+              className="translation-tabs"
+              role="tablist"
+              aria-label={t("admin.form.translationsLanguage")}
+            >
+              {productTranslationLocales.map((locale) => {
+                const selected = translationLocale === locale;
+                const filled = Boolean(
+                  translations[locale].name.trim() || translations[locale].description.trim(),
+                );
+                return (
+                  <button
+                    key={locale}
+                    type="button"
+                    role="tab"
+                    id={translationTabId(locale)}
+                    aria-selected={selected}
+                    aria-controls="product-translation-panel"
+                    tabIndex={selected ? 0 : -1}
+                    className={selected ? "translation-tab active" : "translation-tab"}
+                    onClick={() => setTranslationLocale(locale)}
+                    onKeyDown={onTranslationTabKeyDown}
+                  >
+                    <span aria-hidden="true">{localeLanguages[locale].flag}</span>
+                    <span lang={locale}>{localeLanguages[locale].name}</span>
+                    {filled && (
+                      <span className="translation-filled">
+                        <span className="translation-filled-dot" aria-hidden="true" />
+                        <span className="translation-sr-only">{t("admin.form.translationFilled")}</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              className="translation-panel"
+              id="product-translation-panel"
+              role="tabpanel"
+              aria-labelledby={translationTabId(translationLocale)}
+            >
+              <label>
+                {t("admin.form.translationName")}
+                <input
+                  lang={translationLocale}
+                  maxLength={productTranslationNameMaxLength}
+                  value={translations[translationLocale].name}
+                  onChange={(event) =>
+                    updateTranslation(translationLocale, "name", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                {t("admin.form.translationDescription")}
+                <textarea
+                  lang={translationLocale}
+                  maxLength={productTranslationDescriptionMaxLength}
+                  value={translations[translationLocale].description}
+                  onChange={(event) =>
+                    updateTranslation(translationLocale, "description", event.target.value)
+                  }
+                />
+              </label>
+            </div>
           </section>
         </div>
 

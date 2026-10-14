@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { locales, type Locale } from "@/messages";
 import { useLocale } from "./LocaleProvider";
 
-const languages: Record<Locale, { flag: string; name: string }> = {
+export const languages: Record<Locale, { flag: string; name: string }> = {
   it: { flag: "🇮🇹", name: "Italiano" },
   fr: { flag: "🇫🇷", name: "Français" },
   es: { flag: "🇪🇸", name: "Español" },

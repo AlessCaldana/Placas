@@ -4,6 +4,7 @@ import { bufferRequestWithinProductImageLimit } from "@/lib/product-images";
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
 import { lookupOrderTracking } from "@/lib/services/shipments";
 import { parseTrackingLookupInput } from "@/lib/validators/shipment";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -13,22 +14,12 @@ const MAX_BODY_BYTES = 2 * 1024;
 const lookupLimiter = createRateLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
 const NO_STORE = { "Cache-Control": "no-store" };
 
-function isCrossOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    return new URL(origin).host !== new URL(request.url).host;
-  } catch {
-    return true;
-  }
-}
-
 function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return NextResponse.json(body, { status, headers: { ...NO_STORE, ...headers } });
 }
 
 export async function POST(request: Request) {
-  if (isCrossOrigin(request)) return json({ error: "invalid_request" }, 403);
+  if (isCrossOriginRequest(request)) return json({ error: "invalid_request" }, 403);
   if (!isDatabaseConfigured()) return json({ error: "database_not_configured" }, 503);
 
   const key = clientKey(request);

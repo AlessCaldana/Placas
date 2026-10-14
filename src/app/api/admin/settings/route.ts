@@ -11,6 +11,7 @@ import {
 } from "@/lib/services/site-settings";
 import type { ShippingRates, ShippingZone } from "@/lib/payments/shipping";
 import { parseSiteLegalInput, siteLegalFields } from "@/lib/validators/site-legal";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ function enabled() {
 }
 
 export async function GET(request: Request) {
-  const denied = rejectWithoutAdminSession(request);
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
@@ -40,7 +41,10 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const denied = rejectWithoutAdminSession(request);
+  if (isCrossOriginRequest(request)) {
+    return NextResponse.json({ error: "invalid_request" }, { status: 403 });
+  }
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });

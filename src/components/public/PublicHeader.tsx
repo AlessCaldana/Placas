@@ -7,7 +7,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import { Brand } from "./Brand";
-import { whatsappLink } from "@/lib/site";
+import { whatsappGreeting, whatsappLink } from "@/lib/site";
 import type { SiteSettings } from "@/lib/services/site-settings";
 
 export function PublicHeader({ settings }: { settings: SiteSettings }) {
@@ -43,7 +43,7 @@ export function PublicHeader({ settings }: { settings: SiteSettings }) {
         </nav>
         <div className="nav-actions">
           <LocaleSwitcher />
-          <ButtonLink href={whatsappLink(undefined, settings.whatsappNumber)} kind="gold" icon="chat">
+          <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="gold" icon="chat">
             {t("cta.whatsapp")}
           </ButtonLink>
           <Link className="btn btn-gold reserved-link" href="/admin/dashboard">

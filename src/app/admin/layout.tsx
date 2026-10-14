@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { ADMIN_SESSION_COOKIE, isAdminAuthRequired, isValidAdminSession } from "@/lib/admin-auth";
+import { canManageUsers, isAdminAuthRequired, requireAdminPage } from "@/lib/admin-auth";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 import "./admin.css";
 
@@ -16,12 +14,22 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const cookieStore = await cookies();
-  if (isAdminAuthRequired() && !isValidAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value)) {
-    redirect("/login");
-  }
+  // Redirects to /login without a valid session. The identity (name, role)
+  // is also available via getCurrentAdmin() from "@/lib/admin-auth".
+  const identity = await requireAdminPage();
+  const user = {
+    name: identity.name,
+    role: identity.role,
+    dev: identity.dev,
+    bootstrap: identity.bootstrap,
+    canManageUsers: canManageUsers(identity),
+  };
   const shopName = await getSiteSettings()
     .then((settings) => settings.name)
     .catch(() => defaultSiteSettings().name);
-  return <AdminShell showLogout={isAdminAuthRequired()} shopName={shopName}>{children}</AdminShell>;
+  return (
+    <AdminShell showLogout={isAdminAuthRequired()} shopName={shopName} user={user}>
+      {children}
+    </AdminShell>
+  );
 }

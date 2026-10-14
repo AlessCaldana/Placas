@@ -10,12 +10,15 @@ import {
   type SalesStatistics,
 } from "@/lib/services/statistics";
 import { translate, type Locale } from "@/messages";
+import { requireAdminPage } from "@/lib/admin-auth";
 
 export default async function StatisticsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  // The layout check does not re-run on client navigation; check next to the data.
+  await requireAdminPage();
   const locale = await getRequestLocale();
   const t = (key: string) => translate(locale, key);
   const period = parseStatisticsPeriod((await searchParams).periodo);

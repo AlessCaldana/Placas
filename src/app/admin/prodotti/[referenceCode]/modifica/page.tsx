@@ -7,12 +7,15 @@ import { getRequestLocale } from "@/lib/locale";
 import { getAdminProduct } from "@/lib/services/products";
 import { listAdminCategories } from "@/lib/services/categories";
 import { translate } from "@/messages";
+import { requireAdminPage } from "@/lib/admin-auth";
 
 export default async function EditProductPage({
   params,
 }: {
   params: Promise<{ referenceCode: string }>;
 }) {
+  // The layout check does not re-run on client navigation; check next to the data.
+  await requireAdminPage();
   if (!isDatabaseConfigured()) notFound();
   const { referenceCode } = await params;
   const product = await getAdminProduct(referenceCode).catch(() => null);

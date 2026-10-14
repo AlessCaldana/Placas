@@ -1,3 +1,11 @@
+import {
+  productTranslationDescriptionMaxLength,
+  productTranslationLocales,
+  productTranslationNameMaxLength,
+  type ProductTranslationLocale,
+  type ProductTranslationText,
+} from "@/lib/product-translations";
+
 const productStatuses = ["DRAFT", "PUBLISHED", "UNAVAILABLE"] as const;
 export const draftCategoryPlaceholder = "__draft__";
 
@@ -14,7 +22,52 @@ export type NewProductInput = {
   quantity: number | null;
   material: string | null;
   status: (typeof productStatuses)[number];
+  /**
+   * Only present when the request sent a `translations` object. Contains just
+   * the locales that were sent; an entry with empty name and description means
+   * "remove that translation". `undefined` leaves stored translations untouched.
+   */
+  translations?: Partial<Record<ProductTranslationLocale, ProductTranslationText>>;
 };
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseTranslationField(value: unknown, maxLength: number): string | null {
+  if (value === undefined || value === null) return "";
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text.length > maxLength ? null : text;
+}
+
+/**
+ * Parses the optional `translations` object (keys fr/es/en/nl, each
+ * `{ name?, description? }`). Unknown keys are ignored; wrong types or values
+ * over the length limits make the whole product invalid.
+ */
+export function parseProductTranslationsInput(
+  value: unknown,
+):
+  | { ok: true; data: NewProductInput["translations"] }
+  | { ok: false } {
+  if (value === undefined || value === null) return { ok: true, data: undefined };
+  if (!isPlainObject(value)) return { ok: false };
+  const data: NonNullable<NewProductInput["translations"]> = {};
+  for (const locale of productTranslationLocales) {
+    if (!(locale in value) || value[locale] === undefined) continue;
+    const entry = value[locale];
+    if (!isPlainObject(entry)) return { ok: false };
+    const name = parseTranslationField(entry.name, productTranslationNameMaxLength);
+    const description = parseTranslationField(
+      entry.description,
+      productTranslationDescriptionMaxLength,
+    );
+    if (name === null || description === null) return { ok: false };
+    data[locale] = { name, description };
+  }
+  return { ok: true, data };
+}
 
 export function parseNewProductInput(
   value: unknown,
@@ -40,8 +93,10 @@ export function parseNewProductInput(
       ? null
       : String(rawQuantity);
   const quantity = quantityText === null ? null : Number(quantityText);
+  const translations = parseProductTranslationsInput(input.translations);
 
   if (
+    !translations.ok ||
     (!isDraft && !referenceCode) ||
     referenceCode.length > 64 ||
     (!isDraft && !name) ||
@@ -81,6 +136,7 @@ export function parseNewProductInput(
       quantity,
       material: optionalText(input.material),
       status,
+      ...(translations.data ? { translations: translations.data } : {}),
     },
   };
 }

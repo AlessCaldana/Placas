@@ -4,6 +4,7 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { bufferRequestWithinProductImageLimit } from "@/lib/product-images";
 import { deleteReview, setReviewStatus } from "@/lib/services/reviews";
 import { isUuid, parseReviewStatusInput } from "@/lib/validators/review";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,16 +15,6 @@ function enabled() {
 }
 
 // Defence in depth on top of the SameSite session cookie.
-function isCrossOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    return new URL(origin).host !== new URL(request.url).host;
-  } catch {
-    return true;
-  }
-}
-
 async function readJsonBody(request: Request): Promise<unknown> {
   // Stops reading as soon as the body exceeds the limit.
   const bounded = await bufferRequestWithinProductImageLimit(request, MAX_BODY_BYTES);
@@ -35,10 +26,10 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (isCrossOrigin(request)) {
+  if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
-  const denied = rejectWithoutAdminSession(request);
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {
@@ -64,10 +55,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (isCrossOrigin(request)) {
+  if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
-  const denied = rejectWithoutAdminSession(request);
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {

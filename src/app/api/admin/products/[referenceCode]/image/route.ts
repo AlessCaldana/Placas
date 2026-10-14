@@ -10,6 +10,7 @@ import {
   validateProductImageFiles,
 } from "@/lib/product-images";
 import { replaceAdminProductImage } from "@/lib/services/products";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,10 @@ function isAdminApiEnabled(): boolean {
 }
 
 export async function PUT(request: Request, { params }: RouteContext) {
-  const denied = rejectWithoutAdminSession(request);
+  if (isCrossOriginRequest(request)) {
+    return NextResponse.json({ error: "invalid_request" }, { status: 403 });
+  }
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!isAdminApiEnabled()) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });

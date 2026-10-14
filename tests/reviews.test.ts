@@ -151,12 +151,13 @@ describe("clientKey", () => {
   const request = (headers: Record<string, string>) =>
     new Request("http://localhost/api/reviews", { headers });
 
-  it("without trusted proxies uses X-Real-IP or the last X-Forwarded-For value", () => {
+  it("without trusted proxies uses the last X-Forwarded-For value and ignores X-Real-IP", () => {
     vi.stubEnv("TRUSTED_PROXY_HOPS", "");
     expect(clientKey(request({ "x-forwarded-for": "1.1.1.1, 203.0.113.9" }))).toBe("203.0.113.9");
     expect(clientKey(request({ "x-forwarded-for": "1.1.1.1", "x-real-ip": "203.0.113.5" }))).toBe(
-      "203.0.113.5",
+      "1.1.1.1",
     );
+    expect(clientKey(request({ "x-real-ip": "203.0.113.5" }))).toBe("unknown");
     expect(clientKey(request({}))).toBe("unknown");
   });
 

@@ -1,8 +1,10 @@
 import { HomePage } from "@/components/public/HomePage";
 import { demoCategories, demoProducts } from "@/lib/demo-data";
 import { isDatabaseConfigured } from "@/lib/db";
+import { getRequestLocale } from "@/lib/locale";
 import { isStripeConfigured } from "@/lib/payments/stripe";
 import { listPublicCategories } from "@/lib/services/categories";
+import { buildProductSearchText } from "@/lib/product-translations";
 import { listFeaturedProductIds, listPublicProducts, type PublicCatalogProduct } from "@/lib/services/products";
 import { listPublishedReviews, type PublicReview } from "@/lib/services/reviews";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
@@ -26,7 +28,8 @@ export default async function Home() {
     // Keep the catalog available if settings cannot be read.
   }
   if (isDatabaseConfigured()) {
-    const catalog = await Promise.all([listPublicCategories(), listPublicProducts(), listFeaturedProductIds()])
+    const locale = await getRequestLocale();
+    const catalog = await Promise.all([listPublicCategories(), listPublicProducts(locale), listFeaturedProductIds()])
       // Keep the public page available while the database is being configured.
       .catch(() => null);
     if (catalog) {
@@ -58,6 +61,7 @@ export default async function Home() {
       available: product.available !== false && product.quantity !== 0,
       imageUrl: product.imageUrl ?? null,
       quantity: product.quantity ?? null,
+      searchText: buildProductSearchText(product),
     };
   });
   return <HomePage categories={categories} products={products} settings={settings} reviews={await reviewsPromise} />;

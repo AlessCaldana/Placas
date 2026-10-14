@@ -4,10 +4,17 @@ import { isIP } from "node:net";
 // resets on restart and is per instance; enough for a single server.
 
 export type RateLimiter = {
-  /** Seconds until the key may act again, or 0 when it is not blocked. */
-  retryAfterSeconds(key: string, now?: number): number;
+  /**
+   * Seconds until the key may act again, or 0 when it is not blocked. `max`
+   * overrides the configured limit for this check (e.g. a stricter one).
+   */
+  retryAfterSeconds(key: string, now?: number, max?: number): number;
+  /** Hits of the key in the current window. */
+  count(key: string, now?: number): number;
   /** Counts one hit for the key in the current window. */
   register(key: string, now?: number): void;
+  /** Removes one hit of the key (to release a reserved attempt). */
+  undo(key: string, now?: number): void;
   /** Forgets every hit of the key. */
   clear(key: string): void;
 };
@@ -55,10 +62,13 @@ export function createRateLimiter(options: { max: number; windowMs: number }): R
   }
 
   return {
-    retryAfterSeconds(key, now = Date.now()) {
+    retryAfterSeconds(key, now = Date.now(), limit = max) {
       const record = currentRecord(key, now);
-      if (!record || record.hits < max) return 0;
+      if (!record || record.hits < limit) return 0;
       return Math.ceil((record.windowStart + windowMs - now) / 1000);
+    },
+    count(key, now = Date.now()) {
+      return currentRecord(key, now)?.hits ?? 0;
     },
     register(key, now = Date.now()) {
       const record = currentRecord(key, now);
@@ -68,6 +78,12 @@ export function createRateLimiter(options: { max: number; windowMs: number }): R
       }
       makeRoom(now);
       records.set(key, { hits: 1, windowStart: now });
+    },
+    undo(key, now = Date.now()) {
+      const record = currentRecord(key, now);
+      if (!record) return;
+      record.hits -= 1;
+      if (record.hits <= 0) records.delete(key);
     },
     clear(key) {
       records.delete(key);
@@ -94,9 +110,11 @@ function normalizeIp(value: string | null | undefined): string | null {
 /**
  * Client identifier for rate limiting. The leftmost X-Forwarded-For values are
  * chosen by the client, so only the hops added by trusted proxies are used:
- * with TRUSTED_PROXY_HOPS=0, X-Real-IP or else the last X-Forwarded-For value
- * (Next fills it with the socket address when the header is missing); with
- * N > 0, the N-th value from the right. Anything that is not an IP is "unknown".
+ * with TRUSTED_PROXY_HOPS=0, the last X-Forwarded-For value (Next fills it with
+ * the socket address when the header is missing); with N > 0, the N-th value
+ * from the right. X-Real-IP is never used: it is trustworthy only if a proxy
+ * always overwrites it, which cannot be verified here. Anything that is not an
+ * IP is "unknown".
  */
 export function clientKey(request: Request): string {
   const hops = trustedProxyHops();
@@ -107,7 +125,7 @@ export function clientKey(request: Request): string {
 
   let candidate: string | undefined;
   if (hops === 0) {
-    candidate = request.headers.get("x-real-ip")?.trim() || forwarded[forwarded.length - 1];
+    candidate = forwarded[forwarded.length - 1];
   } else {
     candidate = forwarded[Math.max(0, forwarded.length - hops)];
   }

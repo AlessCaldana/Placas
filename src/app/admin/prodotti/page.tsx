@@ -7,8 +7,11 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { getRequestLocale } from "@/lib/locale";
 import { listAdminProducts } from "@/lib/services/products";
 import { translate } from "@/messages";
+import { requireAdminPage } from "@/lib/admin-auth";
 
 export default async function ProductsPage() {
+  // The layout check does not re-run on client navigation; check next to the data.
+  await requireAdminPage();
   const locale = await getRequestLocale();
   const t = (key: string) => translate(locale, key);
   const databaseConfigured = isDatabaseConfigured();

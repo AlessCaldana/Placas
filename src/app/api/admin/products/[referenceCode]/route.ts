@@ -11,6 +11,7 @@ import {
   validateProductImageContents,
   validateProductImageFiles,
 } from "@/lib/product-images";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ referenceCode: string }> };
@@ -20,7 +21,7 @@ function enabled() {
 }
 
 export async function GET(request: Request, { params }: RouteContext) {
-  const denied = rejectWithoutAdminSession(request);
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
@@ -36,7 +37,10 @@ export async function GET(request: Request, { params }: RouteContext) {
 }
 
 export async function PUT(request: Request, { params }: RouteContext) {
-  const denied = rejectWithoutAdminSession(request);
+  if (isCrossOriginRequest(request)) {
+    return NextResponse.json({ error: "invalid_request" }, { status: 403 });
+  }
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
@@ -91,7 +95,10 @@ export async function PUT(request: Request, { params }: RouteContext) {
 }
 
 export async function DELETE(request: Request, { params }: RouteContext) {
-  const denied = rejectWithoutAdminSession(request);
+  if (isCrossOriginRequest(request)) {
+    return NextResponse.json({ error: "invalid_request" }, { status: 403 });
+  }
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {

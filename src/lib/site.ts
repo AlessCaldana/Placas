@@ -11,3 +11,16 @@ export function whatsappLink(message?: string, whatsappNumber = site.whatsappNum
   const base = `https://wa.me/${whatsappNumber}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
+
+/** Pre-filled first message, so the shop knows why the visitor is writing. */
+export function whatsappGreeting(
+  t: (key: string) => string,
+  shopName: string,
+  product?: { name: string; referenceCode?: string },
+): string {
+  if (!product) return t("whatsapp.generalMessage").replace("{shop}", shopName);
+  return t("whatsapp.productMessage")
+    .replace("{shop}", shopName)
+    .replace("{name}", product.name)
+    .replace("{code}", product.referenceCode ?? "—");
+}

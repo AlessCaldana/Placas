@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE } from "@/lib/admin-auth";
+import { ADMIN_SESSION_COOKIE, sessionCookieOptions } from "@/lib/admin-session";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== new URL(request.url).host) {
+  if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(ADMIN_SESSION_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  response.cookies.set(ADMIN_SESSION_COOKIE, "", sessionCookieOptions(0));
   return response;
 }

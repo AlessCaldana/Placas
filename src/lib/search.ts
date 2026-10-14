@@ -49,6 +49,14 @@ const categoryTerms: Record<string, string[]> = {
     "videospellen",
   ],
   decorazione: ["decorazione", "decor", "decoration", "décoration", "decoración", "deco", "decoratie", "versiering"],
+  aviazione: ["aviazione", "aerei", "aereo", "aviation", "avion", "avions", "aviación", "avión", "aviones", "plane", "planes", "aircraft", "luchtvaart", "vliegtuig"],
+  storia: ["storia", "guerra", "history", "histoire", "guerre", "historia", "war", "geschiedenis", "oorlog"],
+  fantasy: ["fantasy", "fantasia", "fantasía", "drago", "dragon", "dragón", "draak"],
+  "cinema e musica": ["cinema", "film", "movie", "musica", "music", "musique", "cine", "película", "música", "muziek"],
+  sport: ["sport", "calcio", "football", "soccer", "deporte", "fútbol", "voetbal", "formula 1"],
+  animali: ["animali", "animals", "animaux", "animales", "dieren", "cane", "gatto", "dog", "cat", "chien", "chat", "perro", "gato", "hond", "kat"],
+  insegne: ["insegne", "signs", "panneaux", "letreros", "borden"],
+  campagna: ["campagna", "countryside", "campagne", "campo", "platteland"],
 };
 
 export function normalizeSearchText(value: string): string {

@@ -4,6 +4,7 @@ import { isShippingCountry } from "@/lib/payments/shipping";
 import { isStripeConfigured } from "@/lib/payments/stripe";
 import { CheckoutError, parseCheckoutItems, startCheckout } from "@/lib/services/orders";
 import { isLocale } from "@/messages";
+import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,7 @@ const errorStatus: Record<CheckoutError["code"], number> = {
 };
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== new URL(request.url).host) {
+  if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");

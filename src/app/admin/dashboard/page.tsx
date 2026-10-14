@@ -1,262 +1,218 @@
+import Image from "next/image";
 import Link from "next/link";
 import { AdminHeader, PreviewBanner } from "@/components/admin/AdminHeader";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { adminProducts, adminSales } from "@/lib/demo-data";
-import { eur } from "@/lib/format";
 import { getRequestLocale } from "@/lib/locale";
-import { translate } from "@/messages";
+import { translate, type Locale } from "@/messages";
 import { isDatabaseConfigured } from "@/lib/db";
-import { getDashboardInventory } from "@/lib/services/dashboard";
+import { getDashboardOverview, type DashboardOverview } from "@/lib/services/dashboard";
+import { bucketKeys } from "@/lib/services/statistics";
+import { requireAdminPage } from "@/lib/admin-auth";
+
+const DATE_TIME_ZONE = "Europe/Rome";
+const EMPTY = "—";
+const LOW_STOCK_LIMIT = 5;
+
+type Translate = (key: string, values?: Record<string, string | number>) => string;
 
 export default async function Dashboard() {
+  // The layout check does not re-run on client navigation; check next to the data.
+  await requireAdminPage();
   const locale = await getRequestLocale();
-  const t = (key: string) => translate(locale, key);
+  const t: Translate = (key, values = {}) =>
+    Object.entries(values).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), translate(locale, key));
   const databaseConfigured = isDatabaseConfigured();
-  let inventory: Awaited<ReturnType<typeof getDashboardInventory>> | null = null;
+
+  let overview: DashboardOverview | null = null;
   let databaseError = false;
   if (databaseConfigured) {
     try {
-      inventory = await getDashboardInventory();
+      overview = await getDashboardOverview();
     } catch {
       databaseError = true;
     }
+  } else {
+    // Without a database the page shows the demo data, as before.
+    overview = demoOverview();
   }
-  // Todo se calcula a partir de los datos demostrativos (como se hará con los reales).
-  const available = adminProducts.filter(
-    (p) => p.state === "published" && (p.qty ?? 0) > 0,
-  ).length;
-  const revenue = adminSales.reduce((sum, s) => sum + s.qty * s.unit, 0);
-  const units = adminSales.reduce((sum, s) => sum + s.qty, 0);
-
-  const sold = new Map<string, number>();
-  adminProducts.forEach((p) => sold.set(p.name, 0));
-  adminSales.forEach((s) => sold.set(s.product, (sold.get(s.product) ?? 0) + s.qty));
-  const ranking = [...sold.entries()].sort((a, b) => b[1] - a[1]);
-  const top = ranking.slice(0, 4);
-  const low = [...ranking].reverse().slice(0, 3);
-  const max = Math.max(...ranking.map(([, n]) => n), 1);
-
-  const stats: { name: string; value: string; icon: IconName }[] = [
-    {
-      name: t("admin.dashboard.totalProducts"),
-      value: String(adminProducts.length),
-      icon: "box",
-    },
-    {
-      name: t("admin.dashboard.availableProducts"),
-      value: String(available),
-      icon: "category",
-    },
-    {
-      name: t("admin.dashboard.monthSales"),
-      value: String(adminSales.length),
-      icon: "bag",
-    },
-    { name: t("admin.dashboard.revenue"), value: eur(revenue), icon: "bar" },
-  ];
-  const summaryStats = inventory
-    ? [
-        { name: t("admin.dashboard.totalProducts"), value: String(inventory.total), icon: "box" as const },
-        { name: t("admin.dashboard.availableProducts"), value: String(inventory.available), icon: "category" as const },
-        { name: t("admin.dashboard.outOfStock"), value: String(inventory.outOfStock), icon: "inbox" as const },
-        { name: t("admin.dashboard.draftProducts"), value: String(inventory.drafts), icon: "settings" as const },
-      ]
-    : databaseError
-      ? [
-          { name: t("admin.dashboard.totalProducts"), value: "—", icon: "box" as const },
-          { name: t("admin.dashboard.availableProducts"), value: "—", icon: "category" as const },
-          { name: t("admin.dashboard.outOfStock"), value: "—", icon: "inbox" as const },
-          { name: t("admin.dashboard.draftProducts"), value: "—", icon: "settings" as const },
-        ]
-      : stats;
 
   return (
     <div className="dashboard-page">
       <AdminHeader
         title={t("admin.dashboard.title")}
         subtitle={t("admin.dashboard.subtitle")}
-      />
-      {!databaseConfigured ? <PreviewBanner /> : databaseError ? <p className="field-error" role="alert">{t("admin.database.unavailable")}</p> : null}
-
-      <section className="dashboard-welcome">
-        <div>
-          <h2>{t("admin.dashboard.welcome")}</h2>
-          <p>{t("admin.dashboard.welcomeText")}</p>
-        </div>
-        <div className="welcome-actions">
+        action={
           <Link className="btn btn-gold" href="/admin/prodotti/nuovo">
             {t("admin.dashboard.addProduct")} <Icon name="plus" size={18} />
           </Link>
-          <Link className="btn btn-light" href="/admin/vendite">
-            {t("admin.dashboard.recordSale")} <Icon name="bag" size={18} />
-          </Link>
-        </div>
-      </section>
+        }
+      />
+      {!databaseConfigured ? (
+        <PreviewBanner />
+      ) : databaseError ? (
+        <p className="field-error" role="alert">{t("admin.database.unavailable")}</p>
+      ) : null}
 
-      <div className="stats-grid">
-        {summaryStats.map((s) => (
-          <div className="stat-card" key={s.name}>
-            <div className="stat-top">
-              <span>{s.name}</span>
-              <i>
-                <Icon name={s.icon} />
-              </i>
-            </div>
-            <b>{s.value}</b>
-          </div>
-        ))}
-      </div>
+      <KpiTiles overview={overview} locale={locale} t={t} />
 
-      {inventory ? <InventorySummary inventory={inventory} locale={locale} /> : databaseError ? (
-        <section className="admin-card"><h2>{t("admin.dashboard.dataUnavailable")}</h2><p>{t("admin.database.unavailable")}</p></section>
-      ) : <>
-      <div className="dashboard-grid">
+      {overview ? (
+        <DashboardContent overview={overview} locale={locale} t={t} />
+      ) : (
         <section className="admin-card">
-          <div className="card-head">
-            <div>
-              <h2>{t("admin.dashboard.salesOverTime")}</h2>
-              <p>
-                {units} {t("admin.dashboard.unitsInPeriod")}
-              </p>
-            </div>
-            <select aria-label={t("admin.dashboard.period")} defaultValue="30">
-              <option value="7">{t("admin.dashboard.last7")}</option>
-              <option value="30">{t("admin.dashboard.last30")}</option>
-              <option value="month">{t("admin.dashboard.thisMonth")}</option>
-              <option value="year">{t("admin.dashboard.thisYear")}</option>
-            </select>
-          </div>
-          <svg
-            className="line-chart"
-            viewBox="0 0 700 210"
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={t("admin.dashboard.chartLabel")}
-          >
-            <defs>
-              <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#d7ad58" stopOpacity=".35" />
-                <stop offset="1" stopColor="#d7ad58" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M0 176 C60 150 70 156 110 125 S180 145 220 100 S290 120 335 76 S410 112 455 64 S530 92 575 46 S650 70 700 22 L700 210 L0 210Z"
-              fill="url(#area)"
-            />
-            <path
-              d="M0 176 C60 150 70 156 110 125 S180 145 220 100 S290 120 335 76 S410 112 455 64 S530 92 575 46 S650 70 700 22"
-              fill="none"
-              stroke="#d7ad58"
-              strokeWidth="3"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+          <h2>{t("admin.dashboard.dataUnavailable")}</h2>
+          <p className="dashboard-empty">{t("admin.database.unavailable")}</p>
         </section>
-
-        <section className="admin-card">
-          <div className="card-head">
-            <div>
-              <h2>{t("admin.dashboard.bestSellers")}</h2>
-              <p>{t("admin.dashboard.units")}</p>
-            </div>
-          </div>
-          {top.map(([name, n], i) => (
-            <div className="rank-row" key={name}>
-              <span>{i + 1}</span>
-              <b>{name}</b>
-              <strong>{n}</strong>
-            </div>
-          ))}
-        </section>
-      </div>
-
-      <div className="dashboard-grid">
-        <section className="admin-card">
-          <div className="card-head">
-            <div>
-              <h2>{t("admin.dashboard.latestSales")}</h2>
-              <p>{t("admin.dashboard.recentlyRecorded")}</p>
-            </div>
-            <Link href="/admin/vendite">{t("admin.dashboard.viewAll")}</Link>
-          </div>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("admin.dashboard.product")}</th>
-                  <th>{t("admin.dashboard.date")}</th>
-                  <th>{t("admin.dashboard.quantity")}</th>
-                  <th>{t("admin.dashboard.total")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adminSales.map((s, i) => (
-                  <tr key={i}>
-                    <td>
-                      <b>{s.product}</b>
-                    </td>
-                    <td>
-                      {new Intl.DateTimeFormat(locale).format(
-                        new Date(`${s.date}T00:00:00`),
-                      )}
-                    </td>
-                    <td>{s.qty}</td>
-                    <td>
-                      <b>{eur(s.qty * s.unit)}</b>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="admin-card">
-          <div className="card-head">
-            <div>
-              <h2>{t("admin.dashboard.leastSold")}</h2>
-              <p>{t("admin.dashboard.withoutSales")}</p>
-            </div>
-          </div>
-          {low.map(([name, n]) => (
-            <div className="low-row" key={name}>
-              <div>
-                <b>{name}</b>
-                <span>
-                  {n} {t(n === 1 ? "admin.dashboard.sale" : "admin.dashboard.sales")}
-                </span>
-              </div>
-              <i>
-                <span style={{ width: `${(n / max) * 100}%` }} />
-              </i>
-            </div>
-          ))}
-        </section>
-      </div>
-      </>}
+      )}
     </div>
   );
 }
 
-function InventorySummary({
-  inventory,
+function moneyFormat(locale: Locale) {
+  const currency = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
+  return (cents: number) => currency.format(cents / 100);
+}
+
+/** Picks the zero / one / other text for a counter; the zero form is only asked for where it exists. */
+function countText(t: Translate, base: string, n: number) {
+  return t(`${base}.${n === 0 ? "zero" : n === 1 ? "one" : "other"}`, { n });
+}
+
+function KpiTiles({ overview, locale, t }: { overview: DashboardOverview | null; locale: Locale; t: Translate }) {
+  const money = moneyFormat(locale);
+  const number = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const toShip = overview?.toShip ?? 0;
+
+  return (
+    <section className="stats-grid dashboard-kpis" aria-label={t("admin.dashboard.kpis")}>
+      <div className="stat-card dashboard-kpi accent-teal">
+        <div className="stat-top">
+          <span>{t("admin.dashboard.revenue30")}</span>
+          <i><Icon name="bar" size={18} /></i>
+        </div>
+        <b>{overview ? money(overview.sales.revenueCents) : EMPTY}</b>
+        {overview && (
+          <RevenueDelta
+            current={overview.sales.revenueCents}
+            previous={overview.sales.previousRevenueCents}
+            locale={locale}
+            t={t}
+          />
+        )}
+      </div>
+
+      <div className="stat-card dashboard-kpi accent-mustard">
+        <div className="stat-top">
+          <span>{t("admin.dashboard.orders30")}</span>
+          <i><Icon name="bag" size={18} /></i>
+        </div>
+        <b>{overview ? number(overview.sales.orders) : EMPTY}</b>
+      </div>
+
+      <Link
+        className={`stat-card dashboard-kpi accent-terracotta is-link${toShip > 0 ? " is-alert" : ""}`}
+        href="/admin/spedizioni"
+      >
+        <div className="stat-top">
+          <span>{t("admin.dashboard.toShip")}</span>
+          <i><Icon name="truck" size={18} /></i>
+        </div>
+        <b>{overview ? number(toShip) : EMPTY}</b>
+      </Link>
+
+      <Link className="stat-card dashboard-kpi accent-ink is-link" href="/admin/prodotti">
+        <div className="stat-top">
+          <span>{t("admin.dashboard.lowStock")}</span>
+          <i><Icon name="box" size={18} /></i>
+        </div>
+        <b>{overview ? number(overview.lowStock.length) : EMPTY}</b>
+      </Link>
+    </section>
+  );
+}
+
+function RevenueDelta({
+  current,
+  previous,
   locale,
+  t,
 }: {
-  inventory: Awaited<ReturnType<typeof getDashboardInventory>>;
-  locale: Parameters<typeof translate>[0];
+  current: number;
+  previous: number | null;
+  locale: Locale;
+  t: Translate;
 }) {
-  const t = (key: string) => translate(locale, key);
+  if (!previous) {
+    return current > 0 ? <small className="stat-delta is-new">{t("admin.dashboard.newRevenue")}</small> : null;
+  }
+  const change = (current - previous) / previous;
+  const formatted = new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 0,
+    signDisplay: "exceptZero",
+  }).format(change);
+  const direction = change > 0 ? "up" : change < 0 ? "down" : "flat";
+  return (
+    <small className={`stat-delta is-${direction}`}>
+      <span aria-hidden="true">{direction === "up" ? "▲" : direction === "down" ? "▼" : "■"}</span> {formatted}{" "}
+      {t("admin.dashboard.vsPrevious")}
+    </small>
+  );
+}
+
+function DashboardContent({ overview, locale, t }: { overview: DashboardOverview; locale: Locale; t: Translate }) {
+  const money = moneyFormat(locale);
+  const orderDate = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: DATE_TIME_ZONE });
 
   return (
     <>
-      <div className="dashboard-grid">
+      <div className="dashboard-columns">
+        <TodoCard overview={overview} t={t} />
+        <SalesCard overview={overview} locale={locale} t={t} money={money} />
+      </div>
+
+      <div className="dashboard-columns">
         <section className="admin-card">
-          <div className="card-head"><div><h2>{t("admin.dashboard.mostViewed")}</h2><p>{t("admin.dashboard.viewsHint")}</p></div></div>
-          {inventory.mostViewed ? <div className="rank-row">
-            <span><Icon name="eye" size={18} /></span>
-            <b>{inventory.mostViewed.name}<small className="dashboard-reference">{inventory.mostViewed.referenceCode}</small></b>
-            <strong>{inventory.mostViewed.viewCount} {t("admin.dashboard.views")}</strong>
-          </div> : <p className="dashboard-empty">{t("admin.dashboard.noViews")}</p>}
+          <div className="card-head">
+            <div>
+              <h2>{t("admin.dashboard.latestOrders")}</h2>
+              <p>{t("admin.dashboard.latestOrdersHint")}</p>
+            </div>
+            <Link href="/admin/vendite">{t("admin.dashboard.viewAll")}</Link>
+          </div>
+          {overview.recentOrders.length ? (
+            <ul className="dashboard-list">
+              {overview.recentOrders.map((order) => {
+                const [chipClass, chipKey] = order.needsReview
+                  ? ["pending", "admin.orders.needsReview"]
+                  : order.shipped
+                    ? ["published", "admin.shipments.shipped"]
+                    : ["attention", "admin.dashboard.toShip"];
+                return (
+                  <li className="dashboard-order-row" key={order.id}>
+                    <div>
+                      <b>{order.orderNumber || EMPTY}</b>
+                      <small className="dashboard-reference">
+                        {order.customerName || EMPTY}
+                        {order.paidAt && (
+                          <>
+                            {" · "}
+                            <time dateTime={order.paidAt}>{orderDate.format(new Date(order.paidAt))}</time>
+                          </>
+                        )}
+                      </small>
+                    </div>
+                    <div className="dashboard-order-side">
+                      <strong>{money(order.receivedCents)}</strong>
+                      <span className={`status ${chipClass}`}>{t(chipKey)}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="dashboard-empty">{t("admin.dashboard.noOrders")}</p>
+          )}
         </section>
 
         <section className="admin-card">
@@ -265,46 +221,182 @@ function InventorySummary({
               <h2>{t("admin.dashboard.lowStock")}</h2>
               <p>{t("admin.dashboard.lowStockHint")}</p>
             </div>
+            <Link href="/admin/prodotti">{t("admin.dashboard.goToProducts")}</Link>
           </div>
-          {inventory.lowStock.length ? (
-            <div className="dashboard-scroll-list">
-              {inventory.lowStock.map((product) => (
-                <div className="rank-row" key={product.id}>
-                  <span><Icon name="box" size={18} /></span>
-                  <b>{product.name}<small className="dashboard-reference">{product.referenceCode}</small></b>
-                  <strong>{product.quantity}</strong>
-                </div>
+          {overview.lowStock.length ? (
+            <ul className="dashboard-scroll-list dashboard-list">
+              {overview.lowStock.map((product) => (
+                <li className="dashboard-stock-row" key={product.id}>
+                  {product.imageUrl ? (
+                    <Image className="product-thumbnail" src={product.imageUrl} alt="" width={44} height={44} />
+                  ) : (
+                    <span className="product-thumbnail-placeholder" aria-hidden="true">
+                      {product.name.charAt(0).toLocaleUpperCase(locale)}
+                    </span>
+                  )}
+                  <div>
+                    <b>{product.name}</b>
+                    <small className="dashboard-reference">{product.referenceCode}</small>
+                  </div>
+                  {product.quantity === 0 ? (
+                    <span className="status attention">{t("admin.dashboard.soldOut")}</span>
+                  ) : (
+                    <span className="dashboard-stock-qty">{t("admin.dashboard.remaining", { n: product.quantity })}</span>
+                  )}
+                </li>
               ))}
-            </div>
-          ) : <p className="dashboard-empty">{t("admin.dashboard.noLowStock")}</p>}
-        </section>
-
-        <section className="admin-card">
-          <div className="card-head">
-            <div>
-              <h2>{t("admin.dashboard.salesTitle")}</h2>
-            </div>
-          </div>
-          <p className="dashboard-empty">{t("admin.dashboard.salesNotTracked")}</p>
+            </ul>
+          ) : (
+            <p className="dashboard-empty">{t("admin.dashboard.noLowStock")}</p>
+          )}
         </section>
       </div>
-
-      <section className="admin-card dashboard-recent-card">
-        <div className="card-head">
-          <div>
-            <h2>{t("admin.dashboard.latestProducts")}</h2>
-            <p>{t("admin.dashboard.recentlyAdded")}</p>
-          </div>
-          <Link href="/admin/prodotti">{t("admin.dashboard.viewAll")}</Link>
-        </div>
-        {inventory.recent.length ? inventory.recent.map((product) => (
-          <div className="rank-row" key={product.id}>
-            <span><Icon name="box" size={18} /></span>
-            <b>{product.name}<small className="dashboard-reference">{product.referenceCode} · {product.category.name}</small></b>
-            <strong>{t(`admin.status.${product.status.toLocaleLowerCase("en")}`)}</strong>
-          </div>
-        )) : <p className="dashboard-empty">{t("admin.dashboard.noProducts")}</p>}
-      </section>
     </>
   );
+}
+
+function TodoCard({ overview, t }: { overview: DashboardOverview; t: Translate }) {
+  const tasks: { key: string; count: number; href: string; icon: IconName; base: string; hideWhenDone?: boolean }[] = [
+    { key: "ship", count: overview.toShip, href: "/admin/spedizioni", icon: "truck", base: "admin.dashboard.todo.ship" },
+    { key: "reviews", count: overview.pendingReviews, href: "/admin/recensioni", icon: "chat", base: "admin.dashboard.todo.reviews" },
+    {
+      key: "verify",
+      count: overview.needsReview,
+      href: "/admin/vendite",
+      icon: "eye",
+      base: "admin.dashboard.todo.verify",
+      hideWhenDone: true,
+    },
+    { key: "soldOut", count: overview.outOfStock, href: "/admin/prodotti", icon: "box", base: "admin.dashboard.todo.soldOut" },
+  ];
+  const visible = tasks.filter((task) => task.count > 0 || !task.hideWhenDone);
+  const allClear = tasks.every((task) => task.count === 0);
+
+  return (
+    <section className="admin-card">
+      <div className="card-head">
+        <div>
+          <h2>{t("admin.dashboard.todo")}</h2>
+          <p>{t("admin.dashboard.todoHint")}</p>
+        </div>
+      </div>
+      {allClear ? (
+        <p className="dashboard-all-clear">
+          <i aria-hidden="true"><Icon name="check" size={18} /></i>
+          {t("admin.dashboard.allClear")}
+        </p>
+      ) : (
+        <ul className="dashboard-todo">
+          {visible.map((task) => (
+            <li key={task.key}>
+              {task.count > 0 ? (
+                <Link className={`dashboard-task is-${task.key}`} href={task.href}>
+                  <i aria-hidden="true"><Icon name={task.icon} size={18} /></i>
+                  <span>{countText(t, task.base, task.count)}</span>
+                  <Icon name="arrow" size={18} />
+                </Link>
+              ) : (
+                <div className="dashboard-task is-done">
+                  <i aria-hidden="true"><Icon name="check" size={18} /></i>
+                  <span>{countText(t, task.base, 0)}</span>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function SalesCard({
+  overview,
+  locale,
+  t,
+  money,
+}: {
+  overview: DashboardOverview;
+  locale: Locale;
+  t: Translate;
+  money: (cents: number) => string;
+}) {
+  const { series, sales } = overview;
+  const max = Math.max(...series.map((point) => point.revenueCents), 1);
+  const dayLabel = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
+  const label = (key: string) => dayLabel.format(new Date(`${key}T12:00:00`));
+  const ticks = series.length ? [series[0], series[Math.floor((series.length - 1) / 2)], series[series.length - 1]] : [];
+
+  return (
+    <section className="admin-card">
+      <div className="card-head">
+        <div>
+          <h2>{t("admin.dashboard.chartTitle")}</h2>
+          <p>{t("admin.dashboard.chartTotal", { total: money(sales.revenueCents) })}</p>
+        </div>
+        <Link href="/admin/statistiche">{t("admin.dashboard.viewStats")}</Link>
+      </div>
+      {sales.revenueCents === 0 ? (
+        <p className="dashboard-empty">{t("admin.dashboard.noSales30")}</p>
+      ) : (
+        <figure className="sales-chart dashboard-chart">
+          <div className="sales-chart-scale" aria-hidden="true">
+            <span>{money(max)}</span>
+            <span>{money(0)}</span>
+          </div>
+          <div
+            className="sales-chart-plot"
+            role="img"
+            aria-label={t("admin.dashboard.chartLabel", { total: money(sales.revenueCents), orders: sales.orders })}
+          >
+            {series.map((point) => (
+              <div key={point.key} className="sales-chart-col" data-tip={`${label(point.key)} · ${money(point.revenueCents)}`}>
+                <span className="sales-chart-bar" style={{ height: `${(point.revenueCents / max) * 100}%` }} />
+              </div>
+            ))}
+          </div>
+          <div className="dashboard-chart-axis" aria-hidden="true">
+            {ticks.map((point, index) => (
+              <span key={`${point.key}-${index}`}>{label(point.key)}</span>
+            ))}
+          </div>
+        </figure>
+      )}
+    </section>
+  );
+}
+
+/** Demo figures shown while no database is configured (preview mode). */
+function demoOverview(now = new Date()): DashboardOverview {
+  const keys = bucketKeys(new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000), now, "day");
+  const revenueByDay = new Map<string, number>();
+  for (const sale of adminSales) {
+    revenueByDay.set(sale.date, (revenueByDay.get(sale.date) ?? 0) + sale.qty * sale.unit * 100);
+  }
+  const series = keys.map((key) => ({ key, revenueCents: revenueByDay.get(key) ?? 0 }));
+  const published = adminProducts.filter((product) => product.state === "published" && product.qty !== null);
+  const lowStock = published
+    .filter((product) => (product.qty ?? 0) <= LOW_STOCK_LIMIT)
+    .sort((a, b) => (a.qty ?? 0) - (b.qty ?? 0))
+    .map((product) => ({
+      id: product.reference,
+      name: product.name,
+      referenceCode: product.reference,
+      quantity: product.qty ?? 0,
+      imageUrl: product.imageUrl ?? null,
+    }));
+
+  return {
+    sales: {
+      revenueCents: series.reduce((sum, point) => sum + point.revenueCents, 0),
+      orders: adminSales.filter((sale) => keys.includes(sale.date)).length,
+      previousRevenueCents: null,
+    },
+    series,
+    toShip: 0,
+    needsReview: 0,
+    pendingReviews: 0,
+    outOfStock: published.filter((product) => product.qty === 0).length,
+    lowStock,
+    recentOrders: [],
+  };
 }

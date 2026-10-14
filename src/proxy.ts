@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_SESSION_COOKIE, isAdminAuthRequired, isValidAdminSession } from "@/lib/admin-auth";
+import { ADMIN_SESSION_COOKIE, isAdminAuthRequired, verifySessionToken } from "@/lib/admin-session";
 
-// Optimistic check: route handlers and the admin layout verify the session again.
+// Optimistic check (signature and expiry only, no database). Route handlers
+// and the admin layout/pages do the full check: account exists, is active and
+// its sessionVersion matches (see src/lib/admin-auth.ts).
 export function proxy(request: NextRequest) {
-  if (!isAdminAuthRequired() || isValidAdminSession(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)) {
+  if (!isAdminAuthRequired() || verifySessionToken(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)) {
     return NextResponse.next();
   }
   if (request.nextUrl.pathname.startsWith("/api/")) {

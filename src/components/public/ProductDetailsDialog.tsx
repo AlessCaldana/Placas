@@ -14,6 +14,7 @@ export function ProductDetailsDialog({
   onPrevious,
   onNext,
   position,
+  whatsappHref,
 }: {
   product: PublicCatalogProduct;
   locale: Locale;
@@ -24,6 +25,8 @@ export function ProductDetailsDialog({
   onPrevious?: () => void;
   onNext?: () => void;
   position?: { index: number; total: number };
+  /** WhatsApp chat with a message about this product already written. */
+  whatsappHref?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const ignoreNextCloseEvent = useRef(false);
@@ -240,7 +243,15 @@ export function ProductDetailsDialog({
               <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 18, padding: "10px 0", borderBottom: "1px solid var(--line)", fontSize: 13 }}><dt style={{ color: "var(--muted)" }}>{label}</dt><dd style={{ margin: 0, textAlign: "right" }}>{value}</dd></div>
             ))}
           </dl>
-          <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, marginTop: 24, padding: "0 20px", border: 0, background: addDisabled ? "#a89f8c" : "var(--ink)", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 24 }}>
+            <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 20px", border: 0, background: addDisabled ? "#a89f8c" : "var(--ink)", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
+            {whatsappHref && (
+              <a className="product-dialog-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 18px", border: "1px solid var(--line)", color: "var(--ink)", font: "600 13px 'DM Sans Variable', sans-serif", textDecoration: "none" }}>
+                <Icon name="chat" size={17} />
+                {t("product.askWhatsapp")}
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </dialog>

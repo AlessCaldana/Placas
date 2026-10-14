@@ -1,6 +1,18 @@
 import { randomUUID } from "node:crypto";
 import type { AdminProduct, AdminState } from "@/lib/demo-data";
+import type { Prisma } from "@/generated/prisma/client";
+import type { CatalogLocale } from "@/generated/prisma/enums";
 import { getDb } from "@/lib/db";
+import {
+  buildProductSearchText,
+  emptyProductTranslations,
+  fromCatalogLocale,
+  localizeProductText,
+  productTranslationLocales,
+  toCatalogLocale,
+  type ProductTranslations,
+} from "@/lib/product-translations";
+import type { Locale } from "@/messages";
 import { draftCategoryPlaceholder, type NewProductInput } from "@/lib/validators/product";
 
 export type PublicCatalogProduct = {
@@ -20,6 +32,8 @@ export type PublicCatalogProduct = {
   available: boolean;
   imageUrl: string | null;
   quantity: number | null;
+  /** Italian name, every translated name, brand and model, for the public search. */
+  searchText: string;
 };
 
 /** `null` quantity means stock is not tracked, so the product never runs out. */
@@ -27,12 +41,17 @@ function isOutOfStock(quantity: number | null): boolean {
   return quantity !== null && quantity <= 0;
 }
 
-export async function listPublicProducts(): Promise<PublicCatalogProduct[]> {
+/**
+ * Published products with `name`/`description` in `locale`; each field falls
+ * back to the Italian text when its translation is missing or blank.
+ */
+export async function listPublicProducts(locale: Locale = "it"): Promise<PublicCatalogProduct[]> {
   const products = await getDb().product.findMany({
     where: { status: "PUBLISHED", category: { active: true } },
     include: {
       category: { include: { parent: true } },
       images: { orderBy: { position: "asc" }, take: 1 },
+      translations: { select: { locale: true, name: true, description: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -41,10 +60,11 @@ export async function listPublicProducts(): Promise<PublicCatalogProduct[]> {
     const names = category.parent
       ? [category.parent.name, category.name]
       : [category.name];
+    const text = localizeProductText(product, product.translations, locale);
     return {
       id: product.id,
-      name: product.name,
-      description: product.description ?? "",
+      name: text.name,
+      description: text.description,
       path: names.join(" · "),
       size: product.size,
       price: `€ ${product.price.toFixed(2).replace(".", ",")}`,
@@ -60,6 +80,7 @@ export async function listPublicProducts(): Promise<PublicCatalogProduct[]> {
       categoryIds: category.parent
         ? [category.id, category.parent.id]
         : [category.id],
+      searchText: buildProductSearchText(product, product.translations),
     };
   });
 }
@@ -151,12 +172,58 @@ export type AdminProductDetails = {
   material: string;
   status: AdminState;
   images: string[];
+  /** Translations for fr/es/en/nl; empty strings when missing. Italian is `name`/`description`. */
+  translations: ProductTranslations;
 };
+
+function toAdminTranslations(
+  rows: { locale: CatalogLocale; name: string; description: string | null }[],
+): ProductTranslations {
+  const translations = emptyProductTranslations();
+  for (const row of rows) {
+    const locale = fromCatalogLocale(row.locale);
+    if (locale) translations[locale] = { name: row.name, description: row.description ?? "" };
+  }
+  return translations;
+}
+
+/**
+ * Upserts the non-empty translations sent and deletes the ones sent empty.
+ * Locales not present in `translations` are left untouched; Italian is never stored here.
+ */
+async function saveProductTranslations(
+  transaction: Prisma.TransactionClient,
+  productId: string,
+  translations: NewProductInput["translations"],
+): Promise<void> {
+  if (!translations) return;
+  for (const locale of productTranslationLocales) {
+    const entry = translations[locale];
+    if (!entry) continue;
+    const catalogLocale = toCatalogLocale(locale);
+    if (!entry.name && !entry.description) {
+      await transaction.productTranslation.deleteMany({
+        where: { productId, locale: catalogLocale },
+      });
+      continue;
+    }
+    const data = { name: entry.name, description: entry.description || null };
+    await transaction.productTranslation.upsert({
+      where: { productId_locale: { productId, locale: catalogLocale } },
+      update: data,
+      create: { productId, locale: catalogLocale, ...data },
+    });
+  }
+}
 
 export async function getAdminProduct(referenceCode: string): Promise<AdminProductDetails | null> {
   const product = await getDb().product.findUnique({
     where: { referenceCode },
-    include: { category: { include: { parent: true } }, images: { orderBy: { position: "asc" } } },
+    include: {
+      category: { include: { parent: true } },
+      images: { orderBy: { position: "asc" } },
+      translations: { select: { locale: true, name: true, description: true } },
+    },
   });
   if (!product) return null;
   return {
@@ -177,6 +244,7 @@ export async function getAdminProduct(referenceCode: string): Promise<AdminProdu
     material: product.material ?? "",
     status: product.status.toLocaleLowerCase("en") as AdminState,
     images: product.images.map((image) => image.url),
+    translations: toAdminTranslations(product.translations),
   };
 }
 
@@ -242,6 +310,7 @@ export async function createAdminProduct(
       },
       include: { category: true, images: { orderBy: { position: "asc" } } },
     });
+    await saveProductTranslations(transaction, product.id, input.translations);
     return toAdminProduct(product);
   });
 }
@@ -299,6 +368,7 @@ export async function updateAdminProduct(
       },
       include: { category: true, images: { orderBy: { position: "asc" } } },
     });
+    await saveProductTranslations(transaction, product.id, input.translations);
     return { product: toAdminProduct(product), previousImages: previousImages.map((image) => image.url) };
   });
 }

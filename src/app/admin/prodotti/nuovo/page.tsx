@@ -5,8 +5,11 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { getRequestLocale } from "@/lib/locale";
 import { translate } from "@/messages";
 import { listAdminCategories, type AdminCategory } from "@/lib/services/categories";
+import { requireAdminPage } from "@/lib/admin-auth";
 
 export default async function NewProductPage() {
+  // The layout check does not re-run on client navigation; check next to the data.
+  await requireAdminPage();
   const locale = await getRequestLocale();
   const databaseConfigured = isDatabaseConfigured();
   let initialDatabaseCategories: AdminCategory[] | null = null;

@@ -10,7 +10,7 @@ function enabled() {
 }
 
 export async function GET(request: Request) {
-  const denied = rejectWithoutAdminSession(request);
+  const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
   if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {

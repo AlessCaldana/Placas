@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Icon } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
 
 export default function LoginPage() {
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -24,13 +26,15 @@ export default function LoginPage() {
     }).catch(() => null);
     setBusy(false);
     if (!response?.ok) {
-      const errorKey = response?.status === 503
-        ? "login.notConfigured"
-        : response?.status === 429
-          ? "login.tooManyAttempts"
-          : response
-            ? "login.invalid"
-            : "login.networkError";
+      let errorKey = "login.networkError";
+      if (response?.status === 503) {
+        const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+        errorKey = body?.error === "auth_unavailable" ? "login.unavailable" : "login.notConfigured";
+      } else if (response?.status === 429) {
+        errorKey = "login.tooManyAttempts";
+      } else if (response) {
+        errorKey = "login.invalid";
+      }
       setError(t(errorKey));
       return;
     }
@@ -56,14 +60,29 @@ export default function LoginPage() {
           onChange={(event) => setEmail(event.target.value)}
         />
         <label htmlFor="admin-password">{t("login.password")}</label>
-        <input
-          id="admin-password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
+        <div className="password-wrap">
+          <input
+            id="admin-password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            aria-controls="admin-password"
+            aria-label={t(showPassword ? "admin.password.hide" : "admin.password.show")}
+            title={t(showPassword ? "admin.password.hide" : "admin.password.show")}
+            onClick={() => setShowPassword((current) => !current)}
+          >
+            <Icon name={showPassword ? "eyeOff" : "eye"} size={19} />
+          </button>
+        </div>
         {error && <p className="login-error" role="alert">{error}</p>}
         <button type="submit" disabled={busy}>{busy ? t("login.submitting") : t("login.submit")}</button>
       </form>
@@ -77,6 +96,10 @@ export default function LoginPage() {
         input { width: 100%; padding: 12px 14px; border: 1px solid #d9d1c5; border-radius: 8px; font: inherit; }
         button { padding: 13px; border: 0; border-radius: 8px; background: #27241f; color: white; font: inherit; font-weight: 600; cursor: pointer; }
         button:disabled { opacity: .65; cursor: wait; }
+        .password-wrap { position: relative; }
+        .password-wrap input { padding-right: 48px; }
+        .password-wrap .password-toggle { position: absolute; top: 50%; right: 6px; width: 38px; height: 38px; padding: 0; display: grid; place-items: center; transform: translateY(-50%); border-radius: 6px; background: transparent; color: #706a62; }
+        .password-wrap .password-toggle:hover, .password-wrap .password-toggle:focus-visible { background: #f5f2ec; color: #26231f; }
         .login-card .login-error { color: #a33124; font-size: 14px; }
       `}</style>
     </main>
