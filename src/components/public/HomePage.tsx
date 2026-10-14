@@ -4,13 +4,14 @@ import { useState } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
+import { HeroCarousel } from "@/components/public/HeroCarousel";
 import { ProductCard } from "@/components/public/ProductCard";
 import { ProductDetailsDialog } from "@/components/public/ProductDetailsDialog";
 import { ReviewsSection } from "@/components/public/ReviewsSection";
 import { ShoppingCart, type CartItem } from "@/components/public/ShoppingCart";
 import { SearchBar } from "@/components/public/SearchBar";
 import type { PublicCatalogCategory } from "@/lib/services/categories";
-import type { PublicCatalogProduct } from "@/lib/services/products";
+import type { HeroProduct, PublicCatalogProduct } from "@/lib/services/products";
 import type { PublicReview } from "@/lib/services/reviews";
 import { whatsappGreeting, whatsappLink } from "@/lib/site";
 import { categoryMessageKey, translate } from "@/messages";
@@ -26,11 +27,14 @@ export function HomePage({
   paymentsEnabled = false,
   reviews = [],
   featuredIds,
+  heroProducts = [],
 }: {
   categories: PublicCatalogCategory[];
   products: PublicCatalogProduct[];
   /** Products to show before the visitor filters; without it the first eight are shown. */
   featuredIds?: string[];
+  /** Products for the hero carousel (marked in the admin, or featured as fallback). */
+  heroProducts?: HeroProduct[];
   settings: SiteSettings;
   paymentsEnabled?: boolean;
   reviews?: PublicReview[];
@@ -84,6 +88,12 @@ export function HomePage({
     });
     setSelectedProduct(null);
   };
+  // Hero plates open the same details dialog as the catalog; otherwise jump to the products.
+  const openHeroProduct = (heroProduct: HeroProduct) => {
+    const product = products.find((item) => item.id === heroProduct.id);
+    if (product) setSelectedProduct(product);
+    else document.getElementById("prodotti")?.scrollIntoView({ behavior: "smooth" });
+  };
   const changeCartQuantity = (productId: string, change: number) => {
     setCartItems((current) => current.flatMap((item) => {
       if (item.product.id !== productId) return [item];
@@ -95,15 +105,25 @@ export function HomePage({
 
   return (
     <>
-      <section className="hero">
+      <section className={heroProducts.length ? "hero has-carousel" : "hero"}>
         <div className="hero-content">
-          <div className="eyebrow light"><span /> {t("hero.eyebrow")}</div>
-          <h1>{t("hero.title1")}<br />{t("hero.title2")} <em>{t("hero.em")}</em></h1>
-          <p>{t("hero.text")}</p>
-          <div className="hero-buttons">
-            <ButtonLink href="/#catalogo" kind="gold" icon="arrow">{t("cta.catalog")}</ButtonLink>
-            <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="light" icon="chat">{t("cta.whatsapp")}</ButtonLink>
+          <div className="hero-copy">
+            <div className="eyebrow light"><span /> {t("hero.eyebrow")}</div>
+            <h1>{t("hero.title1")}<br />{t("hero.title2")} <em>{t("hero.em")}</em></h1>
+            <p>{t("hero.text")}</p>
+            <div className="hero-buttons">
+              <ButtonLink href="/#catalogo" kind="gold" icon="arrow">{t("cta.catalog")}</ButtonLink>
+              <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="light" icon="chat">{t("cta.whatsapp")}</ButtonLink>
+            </div>
           </div>
+          {heroProducts.length > 0 && (
+            <HeroCarousel
+              products={heroProducts}
+              locale={locale}
+              paused={Boolean(selectedProduct)}
+              onSelect={openHeroProduct}
+            />
+          )}
         </div>
       </section>
 

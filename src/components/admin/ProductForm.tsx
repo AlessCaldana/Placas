@@ -103,6 +103,7 @@ export function ProductForm({
   const [selectedSize, setSelectedSize] = useState(initialProduct?.size ?? defaultProductSizes[0]);
   const [selectedPrice, setSelectedPrice] = useState((initialProduct?.price ?? defaultProductPrices[0]).toFixed(2));
   const [selectedStatus, setSelectedStatus] = useState(initialProduct?.status ?? "published");
+  const [showOnHero, setShowOnHero] = useState(initialProduct?.showOnHero ?? false);
   const isDraft = selectedStatus === "draft";
   const formSizes = sizes.includes(selectedSize) ? sizes : [selectedSize, ...sizes];
   const formPrices = prices.some((price) => price.toFixed(2) === selectedPrice)
@@ -294,6 +295,7 @@ export function ProductForm({
       quantity: value("qty"),
       material: value("material"),
       status: selectedStatus.toLocaleUpperCase("en"),
+      showOnHero,
       // Always send all four languages with both fields: a missing field would clear it.
       translations: Object.fromEntries(
         productTranslationLocales.map((locale) => [
@@ -346,6 +348,7 @@ export function ProductForm({
         form.reset();
         setCategory("");
         setSub("");
+        setShowOnHero(false);
         setTranslations(emptyProductTranslations());
         setTranslationLocale(productTranslationLocales[0]);
       }
@@ -689,6 +692,21 @@ export function ProductForm({
               </label>
             ))}
             {isDraft && <p className="draft-note">{t("admin.form.draftOptionalNote")}</p>}
+          </section>
+          <section className="admin-card form-card">
+            <h2>{t("admin.form.heroSection")}</h2>
+            <label className="radio-row checkbox-row">
+              <input
+                type="checkbox"
+                name="showOnHero"
+                checked={showOnHero}
+                onChange={(event) => setShowOnHero(event.target.checked)}
+              />
+              <span>
+                <b>{t("admin.form.showOnHero")}</b>
+                <small>{t("admin.form.showOnHeroHint")}</small>
+              </span>
+            </label>
           </section>
           {!databaseConfigured && (
             <p className="field-error" role="note">

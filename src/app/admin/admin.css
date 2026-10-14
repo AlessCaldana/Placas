@@ -637,7 +637,7 @@ td {
   font-size: 13px;
   font-weight: 700;
 }
-.form-card input:not([type="radio"]):not([type="file"]),
+.form-card input:not([type="radio"]):not([type="checkbox"]):not([type="file"]),
 .form-card select,
 .form-card textarea {
   border: 1px solid var(--line);
@@ -725,6 +725,18 @@ td {
   color: var(--muted);
   font-size: 12px;
   font-weight: 400;
+}
+.form-card label.checkbox-row {
+  padding-bottom: 4px;
+  border-bottom: 0;
+  cursor: pointer;
+}
+.checkbox-row input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--green);
 }
 .form-side > .btn {
   width: 100%;

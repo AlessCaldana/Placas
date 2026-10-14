@@ -114,6 +114,80 @@ export async function listFeaturedProductIds(limit = 8): Promise<string[]> {
     .map((product) => product.id);
 }
 
+export type HeroProduct = {
+  id: string;
+  /** Name in the requested locale, falling back to Italian. */
+  name: string;
+  referenceCode: string;
+  /** First image of the product (lowest `position`). */
+  imageUrl: string;
+  /** Stored alt text of that image, or the localized name when it is empty. */
+  altText: string;
+};
+
+const heroProductInclude = {
+  images: { orderBy: { position: "asc" }, take: 1, select: { url: true, altText: true } },
+  translations: { select: { locale: true, name: true, description: true } },
+} satisfies Prisma.ProductInclude;
+
+type HeroProductRow = Prisma.ProductGetPayload<{ include: typeof heroProductInclude }>;
+
+function toHeroProduct(product: HeroProductRow, locale: Locale): HeroProduct | null {
+  const image = product.images[0];
+  if (!image) return null;
+  const { name } = localizeProductText(product, product.translations, locale);
+  return {
+    id: product.id,
+    name,
+    referenceCode: product.referenceCode,
+    imageUrl: image.url,
+    altText: image.altText?.trim() || name,
+  };
+}
+
+/**
+ * Products for the home page hero carousel: available products marked
+ * `showOnHero` that have at least one image, most recently updated first.
+ * When none is marked, falls back to the featured products (same order as
+ * `listFeaturedProductIds`) that have an image, so the hero is never empty.
+ */
+export async function listHeroProducts(locale: Locale = "it", limit = 8): Promise<HeroProduct[]> {
+  const db = getDb();
+  const visible = {
+    status: "PUBLISHED",
+    category: { active: true },
+    images: { some: {} },
+  } satisfies Prisma.ProductWhereInput;
+  const marked = await db.product.findMany({
+    where: { ...visible, showOnHero: true },
+    include: heroProductInclude,
+    orderBy: { updatedAt: "desc" },
+    // Headroom for out-of-stock ones, which are skipped below.
+    take: limit * 4,
+  });
+  const chosen = marked
+    .filter((product) => !isOutOfStock(product.quantity))
+    .flatMap((product) => toHeroProduct(product, locale) ?? [])
+    .slice(0, limit);
+  if (chosen.length) return chosen;
+
+  // Headroom so featured ones without images can be skipped.
+  const featuredIds = await listFeaturedProductIds(limit * 4);
+  if (!featuredIds.length) return [];
+  const featured = await db.product.findMany({
+    where: { ...visible, id: { in: featuredIds } },
+    include: heroProductInclude,
+  });
+  const byId = new Map(featured.map((product) => [product.id, product]));
+  return featuredIds
+    .flatMap((id) => {
+      const product = byId.get(id);
+      if (!product || isOutOfStock(product.quantity)) return [];
+      return toHeroProduct(product, locale) ?? [];
+    })
+    .slice(0, limit);
+}
+
 function toSlug(value: string): string {
   return (
     value
@@ -171,6 +245,8 @@ export type AdminProductDetails = {
   quantity: number | null;
   material: string;
   status: AdminState;
+  /** Shown in the home page hero carousel. */
+  showOnHero: boolean;
   images: string[];
   /** Translations for fr/es/en/nl; empty strings when missing. Italian is `name`/`description`. */
   translations: ProductTranslations;
@@ -243,6 +319,7 @@ export async function getAdminProduct(referenceCode: string): Promise<AdminProdu
     quantity: product.quantity,
     material: product.material ?? "",
     status: product.status.toLocaleLowerCase("en") as AdminState,
+    showOnHero: product.showOnHero,
     images: product.images.map((image) => image.url),
     translations: toAdminTranslations(product.translations),
   };
@@ -300,6 +377,7 @@ export async function createAdminProduct(
         quantity: input.quantity,
         material: input.material,
         status: input.status,
+        showOnHero: input.showOnHero ?? false,
         images: {
           create: imageUrls.map((url, position) => ({
             url,
@@ -357,6 +435,8 @@ export async function updateAdminProduct(
         quantity: input.quantity,
         material: input.material,
         status: input.status,
+        // Omitted `showOnHero` keeps the stored value.
+        ...(input.showOnHero === undefined ? {} : { showOnHero: input.showOnHero }),
         ...(imageUrls
           ? {
               images: {

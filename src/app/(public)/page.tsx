@@ -5,7 +5,12 @@ import { getRequestLocale } from "@/lib/locale";
 import { isStripeConfigured } from "@/lib/payments/stripe";
 import { listPublicCategories } from "@/lib/services/categories";
 import { buildProductSearchText } from "@/lib/product-translations";
-import { listFeaturedProductIds, listPublicProducts, type PublicCatalogProduct } from "@/lib/services/products";
+import {
+  listFeaturedProductIds,
+  listHeroProducts,
+  listPublicProducts,
+  type PublicCatalogProduct,
+} from "@/lib/services/products";
 import { listPublishedReviews, type PublicReview } from "@/lib/services/reviews";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 
@@ -29,16 +34,22 @@ export default async function Home() {
   }
   if (isDatabaseConfigured()) {
     const locale = await getRequestLocale();
-    const catalog = await Promise.all([listPublicCategories(), listPublicProducts(locale), listFeaturedProductIds()])
+    const catalog = await Promise.all([
+      listPublicCategories(),
+      listPublicProducts(locale),
+      listFeaturedProductIds(),
+      listHeroProducts(locale),
+    ])
       // Keep the public page available while the database is being configured.
       .catch(() => null);
     if (catalog) {
-      const [categories, products, featuredIds] = catalog;
+      const [categories, products, featuredIds, heroProducts] = catalog;
       return (
         <HomePage
           categories={categories}
           products={products}
           featuredIds={featuredIds}
+          heroProducts={heroProducts}
           settings={settings}
           paymentsEnabled={isStripeConfigured()}
           reviews={await reviewsPromise}
@@ -64,5 +75,13 @@ export default async function Home() {
       searchText: buildProductSearchText(product),
     };
   });
-  return <HomePage categories={categories} products={products} settings={settings} reviews={await reviewsPromise} />;
+  return (
+    <HomePage
+      categories={categories}
+      products={products}
+      heroProducts={[]}
+      settings={settings}
+      reviews={await reviewsPromise}
+    />
+  );
 }

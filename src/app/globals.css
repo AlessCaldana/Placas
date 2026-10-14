@@ -347,30 +347,56 @@ body:has(.hero) .public-header {
 .eyebrow.centered {
   justify-content: center;
 }
+/* Rojo vintage: ladrillo arriba a la derecha, burdeos abajo a la izquierda (detrás del texto). */
 .hero {
+  --hero-brick: #b8432a;
+  --hero-wine: #7a2230;
   position: relative;
   min-height: min(780px, 92vh);
   display: flex;
   align-items: center;
   color: var(--white);
   overflow: hidden;
+  isolation: isolate;
   background:
-    radial-gradient(120% 90% at 78% 30%, #2f6f6a 0, transparent 60%),
-    linear-gradient(115deg, #1f2a28 0%, #2b2a26 55%, #3b2f24 100%);
+    repeating-linear-gradient(135deg, #ffffff07 0 1px, transparent 1px 7px),
+    radial-gradient(70% 60% at 0% 100%, #5e1a26cc 0, transparent 70%),
+    linear-gradient(215deg, var(--hero-brick) 0%, #9a3329 48%, var(--hero-wine) 100%);
 }
+.hero:after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 120px;
+  z-index: -1;
+  background: linear-gradient(to bottom, transparent, #4a121c40);
+  pointer-events: none;
+}
+/* Aros dorados detrás de las placas (o a la derecha si no hay carrusel). */
 .hero:before {
   content: "";
   position: absolute;
+  z-index: -1;
   right: -8%;
   top: 50%;
   width: 62vmin;
   height: 62vmin;
-  border: 1px solid #d9a23a33;
+  border: 1px solid #f0cf8540;
   border-radius: 50%;
   transform: translateY(-50%);
   box-shadow:
-    0 0 0 7vmin #d9a23a10,
-    0 0 0 14vmin #d9a23a08;
+    0 0 0 7vmin #f0cf8512,
+    0 0 0 14vmin #f0cf850a;
+  pointer-events: none;
+}
+.hero.has-carousel:before {
+  right: auto;
+  left: 74%;
+  top: 52%;
+  width: 46vmin;
+  height: 46vmin;
+  transform: translate(-50%, -50%);
+  border-color: #f0cf8538;
 }
 .hero-content {
   position: relative;
@@ -379,6 +405,15 @@ body:has(.hero) .public-header {
   margin: auto;
   padding: 150px 34px 120px;
 }
+.hero.has-carousel .hero-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  align-items: center;
+  gap: 40px;
+}
+.hero-copy {
+  min-width: 0;
+}
 .hero h1 {
   font-family: var(--ff-serif);
   font-weight: 400;
@@ -386,20 +421,244 @@ body:has(.hero) .public-header {
   line-height: 0.92;
   margin: 0 0 28px;
   letter-spacing: -0.025em;
+  text-shadow: 0 2px 24px #4a121c40;
+}
+.hero.has-carousel h1 {
+  font-size: clamp(54px, 5.8vw, 92px);
 }
 .hero h1 em {
   color: var(--gold-2);
 }
-.hero-content > p {
+.hero .eyebrow.light {
+  color: #fff6e8;
+}
+.hero .eyebrow span {
+  background: var(--gold-2);
+}
+.hero-copy > p {
   max-width: 570px;
   font-size: 17px;
   line-height: 1.7;
-  color: #ffffffe0;
+  color: #fff6ecf2;
 }
 .hero-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 36px;
+}
+/* Sobre el rojo, el oro claro contrasta más que el oro de la marca. */
+.hero .btn-gold,
+body:has(.hero) .public-header .btn-gold {
+  background: var(--gold-2);
+  color: var(--ink);
+  box-shadow: 0 8px 22px #4a121c47;
+}
+.hero .btn-light {
+  border-color: #ffffffb8;
+  background: #ffffff0f;
+}
+.hero .btn-light:hover {
+  background: #ffffff1f;
+}
+.hero :focus-visible,
+body:has(.hero) .public-header :focus-visible {
+  outline-color: var(--gold-2);
+}
+body:has(.hero) .public-header .nav-links a:hover {
+  color: var(--gold-2);
+}
+
+/* ---------- Carrusel de placas del hero ---------- */
+.hero-carousel {
+  --plate-width: clamp(220px, 22vw, 300px);
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+/* Brillo dorado cálido detrás de la pila de placas. */
+.hero-carousel:before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 42%;
+  width: calc(var(--plate-width) * 2.3);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, #f6c86a66, #f0b85a24 55%, transparent);
+  pointer-events: none;
+}
+.hero-carousel-stage {
+  position: relative;
+  width: var(--plate-width);
+  aspect-ratio: 2 / 3;
+  margin-right: 6%;
+}
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 0;
+  transition:
+    transform 0.8s cubic-bezier(0.22, 0.75, 0.25, 1),
+    opacity 0.6s ease,
+    filter 0.8s ease;
+}
+.hero-slide.is-current {
+  z-index: 4;
+  transform: rotate(-2.5deg);
+}
+.hero-slide.is-next {
+  z-index: 3;
+  transform: translate(12%, -3%) rotate(5deg) scale(0.93);
+  filter: brightness(0.62) saturate(0.85);
+}
+.hero-slide.is-after {
+  z-index: 2;
+  transform: translate(21%, -5%) rotate(10deg) scale(0.86);
+  filter: brightness(0.45) saturate(0.7);
+}
+.hero-slide.is-previous {
+  z-index: 5;
+  opacity: 0;
+  transform: translate(-60%, 8%) rotate(-14deg);
+}
+.hero-slide.is-hidden {
+  z-index: 1;
+  opacity: 0;
+  transform: translate(20%, -6%) rotate(11deg) scale(0.8);
+}
+.hero-plate {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #3a1016;
+  box-shadow:
+    0 1px 0 #ffffff26 inset,
+    0 2px 4px #2b0a1040,
+    0 18px 30px #2b0a1059,
+    0 40px 70px #2b0a1066;
+}
+/* Leve reflejo metálico. */
+.hero-plate:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, #ffffff00 35%, #ffffff1c 48%, #ffffff00 60%);
+  box-shadow: 0 0 0 1px #00000026 inset;
+  pointer-events: none;
+}
+.hero-plate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Recorta un poco los bordes (dedos en las fotos de móvil). */
+  transform: scale(1.06);
+  transition: transform 0.6s ease;
+}
+.hero-slide.is-current .hero-plate:hover img {
+  transform: scale(1.1);
+}
+.hero-plate:focus-visible {
+  outline: 3px solid var(--gold-2);
+  outline-offset: 5px;
+}
+.hero-carousel-caption {
+  width: min(100%, 360px);
+  min-height: 2.8em;
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: #fff6ec;
+}
+.hero-carousel-caption > span {
+  display: block;
+  animation: hero-caption-in 0.6s ease both;
+}
+.hero-carousel-caption small {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--gold-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+@keyframes hero-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.hero-carousel-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-carousel-arrow {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #ffffff8c;
+  border-radius: 50%;
+  background: #4a121c33;
+  color: var(--white);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.hero-carousel-arrow:hover {
+  background: var(--gold-2);
+  border-color: var(--gold-2);
+  color: var(--ink);
+}
+.hero-carousel-arrow.is-previous svg {
+  transform: rotate(180deg);
+}
+.hero-carousel-arrow.is-toggle {
+  margin-left: 6px;
+}
+.hero-carousel-dots {
+  display: flex;
+  align-items: center;
+}
+.hero-carousel-dot {
+  width: 24px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.hero-carousel-dot span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ffffff80;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+.hero-carousel-dot:hover span {
+  background: #fff;
+}
+.hero-carousel-dot[aria-current="true"] span {
+  width: 18px;
+  background: var(--gold-2);
 }
 
 /* ---------- Buscador ---------- */
@@ -1223,6 +1482,22 @@ footer {
 }
 
 /* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+  .hero.has-carousel .hero-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 34px;
+    padding-bottom: 96px;
+  }
+  .hero.has-carousel:before {
+    display: none;
+  }
+  .hero-carousel {
+    --plate-width: clamp(160px, 44vw, 220px);
+  }
+  .hero-carousel-stage {
+    margin-right: 10%;
+  }
+}
 @media (max-width: 1050px) {
   .nav-links {
     gap: 18px;
@@ -1313,10 +1588,11 @@ footer {
   .hero-content {
     padding: 120px 24px 100px;
   }
-  .hero h1 {
+  .hero h1,
+  .hero.has-carousel h1 {
     font-size: 54px;
   }
-  .hero-content > p {
+  .hero-copy > p {
     font-size: 15px;
   }
   .hero-buttons {
@@ -1424,6 +1700,14 @@ footer {
   }
   .btn {
     transition: none;
+  }
+  .hero-slide,
+  .hero-plate img,
+  .hero-carousel-dot span {
+    transition: none;
+  }
+  .hero-carousel-caption > span {
+    animation: none;
   }
   .btn:hover {
     transform: none;

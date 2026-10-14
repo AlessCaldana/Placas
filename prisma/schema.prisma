@@ -89,6 +89,8 @@ model Product {
   price         Decimal              @db.Decimal(10, 2)
   quantity      Int?
   viewCount     Int                  @default(0)
+  /// Shown in the home page hero carousel (chosen from the admin panel).
+  showOnHero    Boolean              @default(false)
   material      String?              @db.VarChar(120)
   status        ProductStatus        @default(DRAFT)
   images        ProductImage[]

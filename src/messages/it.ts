@@ -12,6 +12,13 @@ export const it = {
     title2: "per ogni",
     em: "stile",
     text: "Scopri il nostro catalogo di targhe decorative e trova quella giusta per il tuo garage, il tuo studio o la tua collezione.",
+    carousel: {
+      label: "Targhe in vetrina",
+      previous: "Targa precedente",
+      next: "Targa successiva",
+      pause: "Metti in pausa lo scorrimento",
+      play: "Riprendi lo scorrimento",
+    },
   },
   search: { placeholder: "Cerca prodotti, categorie o modelli...", button: "Cerca" },
   catalog: {

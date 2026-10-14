@@ -25,7 +25,9 @@ export type IconName =
   | "copy"
   | "user"
   | "users"
-  | "eyeOff";
+  | "eyeOff"
+  | "pause"
+  | "play";
 
 const paths: Record<IconName, ReactNode> = {
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
@@ -82,6 +84,8 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  pause: <path d="M9 5v14M15 5v14" />,
+  play: <path d="M7 4.5v15L19 12 7 4.5Z" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   truck: (
     <>

@@ -39,6 +39,11 @@ export type NewProductInput = {
    * "remove that translation". `undefined` leaves stored translations untouched.
    */
   translations?: Partial<Record<ProductTranslationLocale, ProductTranslationText>>;
+  /**
+   * Only present when the request sent a boolean `showOnHero` (home page hero
+   * carousel). `undefined` keeps the stored value when editing (false on create).
+   */
+  showOnHero?: boolean;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -105,10 +110,12 @@ export function parseNewProductInput(
       : String(rawQuantity);
   const quantity = quantityText === null ? null : Number(quantityText);
   const translations = parseProductTranslationsInput(input.translations);
+  const showOnHero = input.showOnHero;
   const tooLong = (field: unknown, max: number) => typeof field === "string" && field.trim().length > max;
 
   if (
     !translations.ok ||
+    (showOnHero !== undefined && typeof showOnHero !== "boolean") ||
     (!isDraft && !referenceCode) ||
     referenceCode.length > 64 ||
     (!isDraft && !name) ||
@@ -154,6 +161,7 @@ export function parseNewProductInput(
       material: optionalText(input.material),
       status,
       ...(translations.data ? { translations: translations.data } : {}),
+      ...(typeof showOnHero === "boolean" ? { showOnHero } : {}),
     },
   };
 }
