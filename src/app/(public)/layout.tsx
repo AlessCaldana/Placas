@@ -1,3 +1,5 @@
+// Seventies display font for every public title (latin subset only; not loaded in /admin).
+import "@fontsource/shrikhand/latin-400.css";
 import type { ReactNode } from "react";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { Footer } from "@/components/public/Footer";
@@ -22,7 +24,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
         {translate(locale, "footer.skip")}
       </a>
       <PublicHeader settings={settings} />
-      <main id="main">{children}</main>
+      <main id="main" className="public-main">{children}</main>
       <Footer settings={settings} />
     </>
   );

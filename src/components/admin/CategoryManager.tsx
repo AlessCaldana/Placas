@@ -184,7 +184,6 @@ export function CategoryManager({
             <button
               type="button"
               className="btn btn-danger"
-              style={{ backgroundColor: "#dc2626", color: "#fff" }}
               onClick={() => {
                 setCategoryToDelete("");
                 setDeleteError("");
@@ -322,7 +321,6 @@ export function CategoryManager({
           <button
             type="button"
             className="btn btn-danger"
-            style={{ backgroundColor: "#dc2626", color: "#fff" }}
             onClick={() => void deleteSelectedCategory()}
             disabled={deletingCategory}
           >

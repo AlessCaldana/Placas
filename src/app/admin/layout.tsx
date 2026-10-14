@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { canManageUsers, requireAdminPage } from "@/lib/admin-auth";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
+import "@fontsource/shrikhand/latin-400.css";
 import "./admin.css";
 
 export const metadata: Metadata = {

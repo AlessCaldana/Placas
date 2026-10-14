@@ -88,10 +88,11 @@ export function ProductDetailsDialog({
       maxWidth: "none",
       maxHeight: "min(760px, calc(100% - 36px))",
       padding: 0,
-      border: "1px solid var(--line)",
+      border: "2px solid #5a3220",
+      borderRadius: 18,
       background: "var(--paper)",
       color: "var(--ink)",
-      boxShadow: "0 28px 100px #0005",
+      boxShadow: "6px 6px 0 #e0a526, 0 28px 100px #0005",
       transform: "translate(-50%, -50%)",
       fontFamily: '"DM Sans Variable", "DM Sans", system-ui, sans-serif',
     },
@@ -109,7 +110,7 @@ export function ProductDetailsDialog({
       display: "grid",
       placeItems: "center",
       overflow: "hidden",
-      background: product.imageUrl ? "#ebe0c9" : "linear-gradient(135deg, #755b48, #263c39)",
+      background: product.imageUrl ? "#ebe0c9" : "linear-gradient(135deg, #b8432a, #7a2230)",
     },
     photo: {
       display: "block",
@@ -132,7 +133,7 @@ export function ProductDetailsDialog({
       display: "grid",
       placeItems: "center",
       padding: 0,
-      border: "1px solid var(--line)",
+      border: "2px solid #5a3220",
       borderRadius: "50%",
       background: "#fbf7eee6",
       color: "var(--ink)",
@@ -147,7 +148,7 @@ export function ProductDetailsDialog({
       transform: "translateX(-50%)",
       padding: "6px 12px",
       borderRadius: 999,
-      background: "#2b2a26cc",
+      background: "#3d2216d9",
       color: "#fff",
       font: '700 11px/1 "DM Sans Variable", "DM Sans", system-ui, sans-serif',
       letterSpacing: ".06em",
@@ -190,7 +191,7 @@ export function ProductDetailsDialog({
         onClose();
       }}
     >
-      <button className="product-dialog-close" type="button" onClick={closeDialog} aria-label={t("product.close")} style={{ position: "absolute", zIndex: 2, top: 12, right: 12, width: 42, height: 42, border: "1px solid var(--line)", borderRadius: "50%", background: "var(--paper)", color: "var(--ink)", fontSize: 28, lineHeight: 1, cursor: "pointer" }}>
+      <button className="product-dialog-close" type="button" onClick={closeDialog} aria-label={t("product.close")} style={{ position: "absolute", zIndex: 2, top: 12, right: 12, width: 42, height: 42, border: "2px solid #5a3220", borderRadius: "50%", background: "var(--paper)", color: "#3d2216", fontSize: 28, lineHeight: 1, cursor: "pointer" }}>
         ×
       </button>
       <div className="product-dialog-layout" style={styles.layout}>
@@ -214,7 +215,7 @@ export function ProductDetailsDialog({
           ) : (
             <span aria-hidden="true">{product.name.charAt(0)}</span>
           )}
-          <span className={`product-status ${!product.available ? "is-unavailable" : "is-available"}`} style={{ position: "absolute", top: 18, left: 18, zIndex: 1, padding: "8px 12px", borderRadius: 999, background: !product.available ? "#f6e1d5" : "#dcebe7", color: !product.available ? "#a9471c" : "#2f6f6a", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" }}>
+          <span className={`product-status ${!product.available ? "is-unavailable" : "is-available"}`} style={{ position: "absolute", top: 18, left: 18, zIndex: 1, padding: "8px 12px", borderRadius: 999, background: !product.available ? "#f6dcd3" : "#f5d58a", color: !product.available ? "#7a2230" : "#5a3220", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" }}>
             {t(product.available ? "featured.available" : "featured.unavailable")}
           </span>
           {canBrowse && position && (
@@ -233,8 +234,8 @@ export function ProductDetailsDialog({
         </div>
         <div className="product-dialog-copy" style={styles.copy}>
           <small style={{ color: "var(--muted)", fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase" }}>{product.path}</small>
-          <h2 id="product-dialog-title" style={{ margin: "10px 0", font: "400 clamp(34px, 4vw, 48px)/1.02 'Instrument Serif', Georgia, serif", letterSpacing: "-.035em" }}>{product.name}</h2>
-          <p className="product-dialog-price" style={{ margin: "0 0 28px", fontSize: 19, fontWeight: 700 }}>{product.price}</p>
+          <h2 id="product-dialog-title" style={{ margin: "10px 0 12px", font: "400 clamp(26px, 3vw, 36px)/1.15 var(--ff-display)", fontSynthesis: "none", letterSpacing: 0, color: "#3d2216", overflowWrap: "break-word" }}>{product.name}</h2>
+          <p className="product-dialog-price" style={{ margin: "0 0 28px", color: "#a63a24", fontSize: 20, fontWeight: 700 }}>{product.price}</p>
           <h3 style={{ margin: "22px 0 8px", fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase" }}>{t("product.description")}</h3>
           <p className="product-dialog-description" style={{ margin: 0, color: "var(--muted)", fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-line" }}>{product.description.trim() || t("product.noDescription")}</p>
           <h3 style={{ margin: "22px 0 8px", fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase" }}>{t("product.information")}</h3>
@@ -244,9 +245,9 @@ export function ProductDetailsDialog({
             ))}
           </dl>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 24 }}>
-            <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 20px", border: 0, background: addDisabled ? "#a89f8c" : "var(--ink)", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
+            <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 20px", border: 0, borderRadius: 10, background: addDisabled ? "#8a8577" : "#b8432a", boxShadow: addDisabled ? "none" : "3px 3px 0 #5a3220", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
             {whatsappHref && (
-              <a className="product-dialog-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 18px", border: "1px solid var(--line)", color: "var(--ink)", font: "600 13px 'DM Sans Variable', sans-serif", textDecoration: "none" }}>
+              <a className="product-dialog-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 18px", border: "2px solid #5a3220", borderRadius: 10, color: "#3d2216", font: "600 13px 'DM Sans Variable', sans-serif", textDecoration: "none" }}>
                 <Icon name="chat" size={17} />
                 {t("product.askWhatsapp")}
               </a>

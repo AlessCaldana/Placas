@@ -109,6 +109,7 @@ export function AdminShell({
           </Link>
           {showLogout && (
             <button type="button" className="admin-logout-link" onClick={logout}>
+              <Icon name="lock" size={19} />
               {t("admin.logout")}
             </button>
           )}
@@ -131,7 +132,10 @@ export function AdminShell({
           >
             <Icon name={open ? "x" : "menu"} />
           </button>
-          <b>{shopName}</b>
+          <b className="mobile-admin-brand">
+            <BrandSeal size={34} />
+            {shopName}
+          </b>
         </div>
         <main className="admin-main">{children}</main>
       </div>

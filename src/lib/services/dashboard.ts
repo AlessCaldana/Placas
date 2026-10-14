@@ -1,7 +1,8 @@
 import { getDb } from "@/lib/db";
 import { getSalesStatistics } from "@/lib/services/statistics";
 
-const lowStockLimit = 5;
+// Every plate is a single piece (quantity 1), so only sold-out ones need attention.
+const lowStockLimit = 0;
 
 export async function getDashboardInventory() {
   const products = await getDb().product.findMany({

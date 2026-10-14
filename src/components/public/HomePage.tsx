@@ -71,6 +71,19 @@ export function HomePage({
   // The dialog arrows browse the products currently listed (featured, category or search results).
   const selectedIndex = selectedProduct ? visibleProducts.findIndex((product) => product.id === selectedProduct.id) : -1;
   const selectedCategoryName = categories.find((category) => category.id === selectedCategory)?.name;
+  // Cover photo of each category card: an available product with a photo, preferring the
+  // plates marked for the hero, then the featured ones (categoryIds already include the parent).
+  const heroIds = new Set(heroProducts.map((product) => product.id));
+  const featuredIdSet = new Set(featuredIds ?? []);
+  const categoryCover = (categoryId: string) => {
+    const candidates = products.filter((product) =>
+      product.available && product.imageUrl && product.categoryIds.includes(categoryId),
+    );
+    const cover = candidates.find((product) => heroIds.has(product.id))
+      ?? candidates.find((product) => featuredIdSet.has(product.id))
+      ?? candidates[0];
+    return cover?.imageUrl ?? null;
+  };
   const productsTitle = showFeatured
     ? t("featured.title")
     : selectedCategoryName
@@ -149,7 +162,6 @@ export function HomePage({
             return (
               <button
                 className={`category-card tone-${index % 4}${selectedCategory === category.id ? " is-selected" : ""}`}
-                data-initial={label.charAt(0)}
                 key={category.id}
                 type="button"
                 aria-expanded={isExpanded}
@@ -167,6 +179,7 @@ export function HomePage({
                   }
                 }}
               >
+                <CategoryPhoto imageUrl={categoryCover(category.id)} initial={label.charAt(0)} />
                 <span className="category-copy"><b>{label}</b><i><Icon name="arrow" size={18} /></i></span>
               </button>
             );
@@ -180,7 +193,6 @@ export function HomePage({
                 return (
                   <button
                     className={`category-card tone-${index % 4}${selectedCategory === subcategory.id ? " is-selected" : ""}`}
-                    data-initial={label.charAt(0)}
                     key={subcategory.id}
                     type="button"
                     aria-pressed={selectedCategory === subcategory.id}
@@ -189,6 +201,7 @@ export function HomePage({
                       document.getElementById("prodotti")?.scrollIntoView({ behavior: "smooth" });
                     }}
                   >
+                    <CategoryPhoto imageUrl={categoryCover(subcategory.id)} initial={label.charAt(0)} />
                     <span className="category-copy"><b>{label}</b><i><Icon name="arrow" size={18} /></i></span>
                   </button>
                 );
@@ -197,6 +210,8 @@ export function HomePage({
           </div>
         )}
       </section>
+
+      <div className="retro-divider" aria-hidden="true" />
 
       <section className="section featured" id="prodotti">
         <div className="section-heading"><div>
@@ -249,6 +264,8 @@ export function HomePage({
         onRemove={(productId) => setCartItems((current) => current.filter((item) => item.product.id !== productId))}
       />
 
+      <div className="retro-divider" aria-hidden="true" />
+
       <section className="section why">
         <div className="eyebrow centered"><span /> {t("why.eyebrow")}</div>
         <h2>{t("why.title")}</h2>
@@ -270,5 +287,18 @@ export function HomePage({
           <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="gold" icon="chat">{t("cta.whatsapp")}</ButtonLink></div>
       </section>
     </>
+  );
+}
+
+/** Top of a category card: a real plate of the category, or a colour block with its initial. */
+function CategoryPhoto({ imageUrl, initial }: { imageUrl: string | null; initial: string }) {
+  if (!imageUrl) {
+    return <span className="category-photo is-empty" aria-hidden="true">{initial}</span>;
+  }
+  return (
+    <span className="category-photo">
+      {/* The category name is the button text, so the photo is decorative. */}
+      <img src={imageUrl} alt="" loading="lazy" />
+    </span>
   );
 }

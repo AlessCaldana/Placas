@@ -739,7 +739,6 @@ export function ProductForm({
             <button
               type="button"
               className="btn btn-danger"
-              style={{ backgroundColor: "#dc2626", color: "#fff" }}
               onClick={() => deleteDialog.current?.showModal()}
               disabled={deleting || saving}
             >
@@ -772,7 +771,6 @@ export function ProductForm({
             <button
               type="button"
               className="btn btn-danger"
-              style={{ backgroundColor: "#dc2626", color: "#fff" }}
               onClick={deleteProduct}
               disabled={deleting}
             >

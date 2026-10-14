@@ -1,5 +1,3 @@
-// Display font of the home hero title (latin subset only).
-import "@fontsource/shrikhand/latin-400.css";
 import { HomePage } from "@/components/public/HomePage";
 import { demoCategories, demoProducts } from "@/lib/demo-data";
 import { isDatabaseConfigured } from "@/lib/db";

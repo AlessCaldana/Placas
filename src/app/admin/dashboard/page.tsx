@@ -12,7 +12,7 @@ import { requireAdminPage } from "@/lib/admin-auth";
 
 const DATE_TIME_ZONE = "Europe/Rome";
 const EMPTY = "—";
-const LOW_STOCK_LIMIT = 5;
+const LOW_STOCK_LIMIT = 0;
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
 
@@ -85,7 +85,7 @@ function KpiTiles({ overview, locale, t }: { overview: DashboardOverview | null;
 
   return (
     <section className="stats-grid dashboard-kpis" aria-label={t("admin.dashboard.kpis")}>
-      <div className="stat-card dashboard-kpi accent-teal">
+      <div className="stat-card dashboard-kpi accent-red">
         <div className="stat-top">
           <span>{t("admin.dashboard.revenue30")}</span>
           <i><Icon name="bar" size={18} /></i>
@@ -110,7 +110,7 @@ function KpiTiles({ overview, locale, t }: { overview: DashboardOverview | null;
       </div>
 
       <Link
-        className={`stat-card dashboard-kpi accent-terracotta is-link${toShip > 0 ? " is-alert" : ""}`}
+        className={`stat-card dashboard-kpi accent-orange is-link${toShip > 0 ? " is-alert" : ""}`}
         href="/admin/spedizioni"
       >
         <div className="stat-top">
@@ -120,7 +120,7 @@ function KpiTiles({ overview, locale, t }: { overview: DashboardOverview | null;
         <b>{overview ? number(toShip) : EMPTY}</b>
       </Link>
 
-      <Link className="stat-card dashboard-kpi accent-ink is-link" href="/admin/prodotti">
+      <Link className="stat-card dashboard-kpi accent-brown is-link" href="/admin/prodotti">
         <div className="stat-top">
           <span>{t("admin.dashboard.lowStock")}</span>
           <i><Icon name="box" size={18} /></i>
