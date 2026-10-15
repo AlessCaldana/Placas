@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { isBootstrapMode, isEnvLoginConfigured, isEnvLoginValid } from "@/lib/admin-auth";
 import {
+  ADMIN_DEVICE_COOKIE,
   ADMIN_SESSION_COOKIE,
   ENV_ADMIN_ID,
+  createDeviceToken,
   createSessionToken,
+  deviceCookieOptions,
   getAuthSecret,
+  readDeviceCookie,
   sessionCookieOptions,
+  verifyDeviceToken,
 } from "@/lib/admin-session";
 import {
   beginLoginAttempt,
@@ -94,10 +99,15 @@ export async function POST(request: Request) {
   const email = field("email");
   const password = field("password");
 
+  // A browser that already signed in to this account (valid device cookie)
+  // has its own backoff and a reserved verification slot, so attacks on the
+  // email from elsewhere cannot keep it out (see src/lib/login-rate-limit.ts).
+  const accountKey = loginAccountKey(email);
+  const attempt = { trusted: verifyDeviceToken(readDeviceCookie(request), accountKey) };
+
   // Check and reserve in one synchronous step, before any await, so parallel
   // requests cannot all slip past the limit while scrypt runs.
-  const accountKey = loginAccountKey(email);
-  const retryAfter = beginLoginAttempt(ip, accountKey);
+  const retryAfter = beginLoginAttempt(ip, accountKey, attempt);
   if (retryAfter > 0) return tooManyAttempts(retryAfter);
 
   // Oversized input is refused (and counted), never truncated.
@@ -112,9 +122,9 @@ export async function POST(request: Request) {
   } finally {
     // Exactly one settle call per reserved attempt, so the verification slot
     // is always given back.
-    if (outcome.kind === "session") completeLoginAttempt(ip, accountKey);
+    if (outcome.kind === "session") completeLoginAttempt(ip, accountKey, attempt);
     else if (outcome.kind === "failed") failLoginAttempt();
-    else releaseLoginAttempt(ip, accountKey);
+    else releaseLoginAttempt(ip, accountKey, attempt);
   }
 
   if (outcome.kind === "error") return outcome.response;
@@ -125,5 +135,9 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_SESSION_COOKIE, outcome.token, sessionCookieOptions());
+  // Recognise (or keep recognising, for another 90 days) this browser for
+  // this account. Not a session: logout leaves it in place.
+  const deviceToken = createDeviceToken(accountKey);
+  if (deviceToken) response.cookies.set(ADMIN_DEVICE_COOKIE, deviceToken, deviceCookieOptions());
   return response;
 }

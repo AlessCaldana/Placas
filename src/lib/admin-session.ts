@@ -67,14 +67,82 @@ export function verifySessionToken(
   return { userId, sessionVersion, expiresAt: Number(expiresAt) };
 }
 
-/** Reads the session cookie from a raw request. */
-export function readSessionCookie(request: Request): string | undefined {
+/** Reads a cookie by name from a raw request. */
+function readCookie(request: Request, name: string): string | undefined {
   const cookieHeader = request.headers.get("cookie") ?? "";
   const cookie = cookieHeader
     .split(";")
     .map((part) => part.trim())
-    .find((part) => part.startsWith(`${ADMIN_SESSION_COOKIE}=`));
-  return cookie?.slice(ADMIN_SESSION_COOKIE.length + 1);
+    .find((part) => part.startsWith(`${name}=`));
+  return cookie?.slice(name.length + 1);
+}
+
+/** Reads the session cookie from a raw request. */
+export function readSessionCookie(request: Request): string | undefined {
+  return readCookie(request, ADMIN_SESSION_COOKIE);
+}
+
+// ---------------------------------------------------------------------------
+// Trusted device cookie
+//
+// After a successful login the browser gets a second cookie that says "this
+// browser has signed in to this account before":
+//   v1.<expiresAtEpochSeconds>.<signature>
+//   signature = HMAC-SHA256(AUTH_SECRET, "device|<accountKey>|<expiresAt>")
+// It is NOT a session (it grants no access and requireAdmin ignores it); the
+// login rate limit uses it to keep a separate backoff and a reserved
+// verification slot for the owner's browser (see src/lib/login-rate-limit.ts).
+// Logout does not clear it. `accountKey` is loginAccountKey(email).
+// ---------------------------------------------------------------------------
+
+export const ADMIN_DEVICE_COOKIE = "placa_admin_device";
+export const DEVICE_TTL_SECONDS = 60 * 60 * 24 * 90;
+
+// SHA-256 is 32 bytes: 43 base64url characters without padding.
+const DEVICE_TOKEN = /^v1\.(\d{10})\.([A-Za-z0-9_-]{43})$/;
+const MAX_ACCOUNT_KEY_LENGTH = 254;
+
+function deviceSignature(accountKey: string, expiresAt: string, secret: string): string {
+  return sign(`device|${accountKey}|${expiresAt}`, secret);
+}
+
+function isUsableAccountKey(accountKey: string): boolean {
+  return accountKey.length > 0 && accountKey.length <= MAX_ACCOUNT_KEY_LENGTH;
+}
+
+/** Signed device cookie value for the account, or null when AUTH_SECRET is missing or weak. */
+export function createDeviceToken(accountKey: string, now = Date.now()): string | null {
+  const secret = getAuthSecret();
+  if (!secret || !isUsableAccountKey(accountKey)) return null;
+  const expiresAt = String(Math.floor(now / 1000) + DEVICE_TTL_SECONDS);
+  return `v1.${expiresAt}.${deviceSignature(accountKey, expiresAt, secret)}`;
+}
+
+/** True only for an unexpired device cookie signed for this exact account. */
+export function verifyDeviceToken(
+  value: string | undefined | null,
+  accountKey: string,
+  now = Date.now(),
+): boolean {
+  const secret = getAuthSecret();
+  if (!secret || !value || value.length > 100 || !isUsableAccountKey(accountKey)) return false;
+  const match = DEVICE_TOKEN.exec(value);
+  if (!match) return false;
+  const [, expiresAt, signature] = match;
+  const expected = Buffer.from(deviceSignature(accountKey, expiresAt, secret));
+  const actual = Buffer.from(signature);
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return false;
+  return Number(expiresAt) * 1000 > now;
+}
+
+/** Reads the device cookie from a raw request. */
+export function readDeviceCookie(request: Request): string | undefined {
+  return readCookie(request, ADMIN_DEVICE_COOKIE);
+}
+
+/** Only sent to /api/auth/* (the login needs it; nothing else does). */
+export function deviceCookieOptions(maxAge = DEVICE_TTL_SECONDS) {
+  return { ...sessionCookieOptions(maxAge), path: "/api/auth" };
 }
 
 const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);

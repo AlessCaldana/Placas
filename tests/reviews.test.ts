@@ -164,6 +164,24 @@ describe("createSlidingWindowLimiter", () => {
     expect(limiter.retryAfterSeconds("k", start + 61_000)).toBe(29);
   });
 
+  it("accepts a per-call limit, never above the configured max", () => {
+    const limiter = createSlidingWindowLimiter({ max: 4, windowMs: 60_000 });
+    const start = 7_000_000;
+    limiter.register("k", start);
+    limiter.register("k", start + 10_000);
+    limiter.register("k", start + 20_000);
+    expect(limiter.retryAfterSeconds("k", start + 30_000)).toBe(0);
+    // Stricter limit of 2: the two most recent hits block until start + 70 s.
+    expect(limiter.retryAfterSeconds("k", start + 30_000, 2)).toBe(40);
+    expect(limiter.retryAfterSeconds("k", start + 30_000, 3)).toBe(30);
+    limiter.register("k", start + 30_000);
+    limiter.register("k", start + 40_000);
+    // Only the last 4 hits are kept, so a looser limit behaves as the max.
+    expect(limiter.count("k", start + 40_000)).toBe(4);
+    expect(limiter.retryAfterSeconds("k", start + 40_000, 10)).toBe(limiter.retryAfterSeconds("k", start + 40_000));
+    expect(limiter.retryAfterSeconds("k", start + 40_000)).toBe(30);
+  });
+
   it("undo releases the last reservation", () => {
     const limiter = createSlidingWindowLimiter({ max: 1, windowMs: 60_000 });
     limiter.register("k", 1_000);

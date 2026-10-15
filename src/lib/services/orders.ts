@@ -179,18 +179,43 @@ export async function startCheckout(
   }
 }
 
-function orderIdOf(session: Stripe.Checkout.Session): string | null {
-  const orderId = session.metadata?.orderId ?? session.client_reference_id;
-  return orderId && UUID.test(orderId) ? orderId : null;
+/**
+ * Finds the order that stored this Checkout session id (written by
+ * startCheckout). The order is never chosen from the session's metadata or
+ * client_reference_id: those only have to agree with it. Returns null (and
+ * logs) for sessions we did not create or that point at another order.
+ */
+async function findSessionOrder(session: Stripe.Checkout.Session): Promise<{ id: string } | null> {
+  if (typeof session.id !== "string" || !session.id) return null;
+  const order = await getDb().order.findUnique({
+    where: { stripeSessionId: session.id },
+    select: { id: true },
+  });
+  if (!order) {
+    console.warn("stripe_webhook_unknown_session", session.id);
+    return null;
+  }
+  const claimedIds = [session.metadata?.orderId, session.client_reference_id].filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
+  );
+  if (claimedIds.some((claimedId) => claimedId !== order.id)) {
+    console.warn("stripe_webhook_order_mismatch", session.id, order.id);
+    return null;
+  }
+  return order;
 }
 
 /**
  * Marks a paid order and discounts stock. Idempotent: Stripe may deliver the
- * same event more than once, only the first delivery changes anything.
+ * same event more than once, only the first delivery changes anything. The
+ * order is the one bound to this session id; an amount or currency that does
+ * not match what we created leaves it in NEEDS_REVIEW.
  */
 export async function fulfillPaidSession(session: Stripe.Checkout.Session): Promise<void> {
-  const orderId = orderIdOf(session);
-  if (!orderId || session.payment_status !== "paid") return;
+  if (session.mode !== "payment" || session.payment_status !== "paid") return;
+  const found = await findSessionOrder(session);
+  if (!found) return;
+  const orderId = found.id;
   const shipping = session.collected_information?.shipping_details ?? null;
   const paymentIntent =
     typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
@@ -198,7 +223,7 @@ export async function fulfillPaidSession(session: Stripe.Checkout.Session): Prom
 
   await getDb().$transaction(async (tx) => {
     const claimed = await tx.order.updateMany({
-      where: { id: orderId, status: { in: ["PENDING", "CANCELLED"] } },
+      where: { id: orderId, stripeSessionId: session.id, status: { in: ["PENDING", "CANCELLED"] } },
       data: {
         status: "PAID",
         paidAt: new Date(),
@@ -222,6 +247,8 @@ export async function fulfillPaidSession(session: Stripe.Checkout.Session): Prom
     });
     const problems: string[] = [];
     if (session.amount_total !== order.totalCents) problems.push("amount_mismatch");
+    // Sessions are always created in euros (see startCheckout).
+    if (session.currency?.toLowerCase() !== "eur") problems.push("currency_mismatch");
 
     for (const item of order.items) {
       if (!item.productId) continue;
@@ -246,12 +273,13 @@ export async function fulfillPaidSession(session: Stripe.Checkout.Session): Prom
   });
 }
 
-/** Releases an order whose checkout session expired or whose payment failed. */
+/** Releases the order of a checkout session that expired or whose payment failed. */
 export async function cancelSessionOrder(session: Stripe.Checkout.Session): Promise<void> {
-  const orderId = orderIdOf(session);
-  if (!orderId) return;
+  if (session.mode !== "payment") return;
+  const found = await findSessionOrder(session);
+  if (!found) return;
   await getDb().order.updateMany({
-    where: { id: orderId, status: "PENDING" },
+    where: { stripeSessionId: session.id, status: "PENDING" },
     data: { status: "CANCELLED" },
   });
 }

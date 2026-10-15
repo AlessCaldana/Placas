@@ -22,16 +22,23 @@ import {
   resolveAdminSession,
 } from "@/lib/admin-auth";
 import {
+  ADMIN_DEVICE_COOKIE,
   ADMIN_SESSION_COOKIE,
+  DEVICE_TTL_SECONDS,
   ENV_ADMIN_ID,
   SESSION_TTL_SECONDS,
+  createDeviceToken,
   createSessionToken,
+  deviceCookieOptions,
   isAdminAuthRequired,
   isLoopbackHost,
+  readDeviceCookie,
+  verifyDeviceToken,
   verifySessionToken,
 } from "@/lib/admin-session";
 import {
   MAX_CONCURRENT_VERIFICATIONS,
+  MAX_UNTRUSTED_VERIFICATIONS,
   accountBackoffMs,
   beginPasswordChangeAttempt,
   completePasswordChangeAttempt,
@@ -402,26 +409,115 @@ describe("login rate limit", () => {
     const start = 5_000_000;
     // Ten concurrent requests reach the check before any password is verified;
     // the verification slots and the account backoff both stop the rest.
+    // Untrusted attempts can only take MAX_UNTRUSTED_VERIFICATIONS slots.
     const results = Array.from({ length: 10 }, () => guard.begin(null, "owner@example.com", start));
-    expect(results.filter((retryAfter) => retryAfter === 0)).toHaveLength(MAX_CONCURRENT_VERIFICATIONS);
-    expect(guard.activeVerifications()).toBe(MAX_CONCURRENT_VERIFICATIONS);
+    expect(results.filter((retryAfter) => retryAfter === 0)).toHaveLength(MAX_UNTRUSTED_VERIFICATIONS);
+    expect(guard.activeVerifications()).toBe(MAX_UNTRUSTED_VERIFICATIONS);
   });
 
   it("caps concurrent password verifications globally and frees the slots", () => {
+    expect(MAX_CONCURRENT_VERIFICATIONS).toBe(4);
+    expect(MAX_UNTRUSTED_VERIFICATIONS).toBe(3);
     const guard = createLoginGuard();
     const start = 6_000_000;
-    for (let index = 0; index < MAX_CONCURRENT_VERIFICATIONS; index += 1) {
+    for (let index = 0; index < MAX_UNTRUSTED_VERIFICATIONS; index += 1) {
       expect(guard.begin(null, `spray${index}@example.com`, start)).toBe(0);
     }
-    // Any account, any IP: no slot left.
+    // No slot left for untrusted attempts, any account, any IP...
     expect(guard.begin(null, "owner@example.com", start)).toBe(1);
+    expect(guard.begin("192.0.2.1", "owner@example.com", start)).toBe(1);
+    // ...but the pre-check (account unknown yet) still lets requests in.
+    expect(guard.precheck("192.0.2.1", start)).toBe(0);
+    // The reserved slot goes to a trusted attempt; after that everything is full.
+    expect(guard.begin(null, "owner@example.com", start, { trusted: true })).toBe(0);
+    expect(guard.activeVerifications()).toBe(MAX_CONCURRENT_VERIFICATIONS);
     expect(guard.precheck("192.0.2.1", start)).toBe(1);
+    expect(guard.begin(null, "owner2@example.com", start, { trusted: true })).toBe(1);
+    // One untrusted attempt ends: 3 still run, so the reserve stays free.
     guard.fail();
+    expect(guard.begin(null, "owner@example.com", start)).toBe(1);
+    guard.release(null, "spray1@example.com", start);
     expect(guard.begin(null, "owner@example.com", start)).toBe(0);
     guard.complete(null, "owner@example.com", start);
-    guard.release(null, "spray1@example.com", start);
+    guard.complete(null, "owner@example.com", start, { trusted: true });
     guard.fail();
+    expect(guard.activeVerifications()).toBe(0);
+  });
+
+  it("an attacker without the device cookie cannot push the owner's browser into backoff", () => {
+    const guard = createLoginGuard();
+    const owner = "owner-device@example.com";
+    const start = 6_500_000;
+    // Untrusted IPs (null): the attacker drives the account into backoff.
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const wait = guard.retryAfterSeconds(null, owner, start);
+      failOnce(guard, null, owner, start + wait * 1000);
+    }
+    expect(guard.retryAfterSeconds(null, owner, start + 1000)).toBeGreaterThan(0);
+    expect(guard.begin(null, owner, start + 1000)).toBeGreaterThan(0);
+    // The owner's browser (trusted) is not affected.
+    expect(guard.begin(null, owner, start + 1000, { trusted: true })).toBe(0);
+    guard.complete(null, owner, start + 1000, { trusted: true });
+    // The successful trusted login does not erase the attacker's failures either.
+    expect(guard.begin(null, owner, start + 1000)).toBeGreaterThan(0);
+  });
+
+  it("with three untrusted verifications running, only a trusted attempt gets in", () => {
+    const guard = createLoginGuard();
+    const start = 6_600_000;
+    for (let index = 0; index < MAX_UNTRUSTED_VERIFICATIONS; index += 1) {
+      expect(guard.begin(null, `slow${index}@example.com`, start)).toBe(0);
+    }
+    expect(guard.begin(null, "owner@example.com", start)).toBe(1);
+    expect(guard.begin(null, "owner@example.com", start, { trusted: true })).toBe(0);
+  });
+
+  it("the device cookie holder still has a backoff of their own", () => {
+    const guard = createLoginGuard();
+    const owner = "owner-stolen-cookie@example.com";
+    const start = 6_700_000;
+    const trusted = { trusted: true };
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect(guard.begin(null, owner, start, trusted)).toBe(0);
+      guard.fail();
+    }
+    expect(guard.begin(null, owner, start, trusted)).toBe(15);
+    expect(guard.retryAfterSeconds(null, owner, start, trusted)).toBe(15);
+    // A clean trusted IP gives no free try to trusted attempts.
+    expect(guard.begin("192.0.2.77", owner, start, trusted)).toBe(15);
+    // The untrusted counter was not touched.
+    expect(guard.retryAfterSeconds(null, owner, start)).toBe(0);
+    // The per-IP limit applies to trusted attempts too.
+    const ip = "192.0.2.78";
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect(guard.begin(ip, `other${attempt}@example.com`, start, trusted)).toBe(0);
+      guard.fail();
+    }
+    expect(guard.begin(ip, "fresh@example.com", start, trusted)).toBe(15 * 60);
+  });
+
+  it("complete and release undo the counter the attempt was reserved in", () => {
+    const guard = createLoginGuard();
+    const owner = "owner-undo@example.com";
+    const start = 6_800_000;
+    const trusted = { trusted: true };
+    for (let attempt = 0; attempt < 4; attempt += 1) failOnce(guard, null, owner, start);
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      expect(guard.begin(null, owner, start, trusted)).toBe(0);
+      guard.fail();
+    }
+    // A fifth trusted attempt ends in a server error: released from the trusted counter.
+    expect(guard.begin(null, owner, start, trusted)).toBe(0);
+    guard.release(null, owner, start, trusted);
+    // A fifth untrusted attempt succeeds: released from the untrusted counter.
+    expect(guard.begin(null, owner, start)).toBe(0);
+    guard.complete(null, owner, start);
+    // Both counters still have exactly 4 failures: one more of each is free.
+    expect(failOnce(guard, null, owner, start)).toBe(0);
+    expect(guard.begin(null, owner, start)).toBe(15);
+    expect(guard.begin(null, owner, start, trusted)).toBe(0);
     guard.fail();
+    expect(guard.begin(null, owner, start, trusted)).toBe(15);
     expect(guard.activeVerifications()).toBe(0);
   });
 
@@ -471,6 +567,72 @@ describe("login rate limit", () => {
     expect(beginPasswordChangeAttempt(user, start)).toBe(0);
     completePasswordChangeAttempt(user);
     expect(beginPasswordChangeAttempt(user, start)).toBe(0);
+  });
+});
+
+describe("trusted device cookie", () => {
+  const account = "owner@example.com";
+  const now = 1_800_000_000_000;
+
+  it("round-trips for the same account until it expires (90 days)", () => {
+    const token = createDeviceToken(account, now);
+    expect(token).toMatch(/^v1\.\d{10}\.[A-Za-z0-9_-]{43}$/);
+    expect(verifyDeviceToken(token, account, now)).toBe(true);
+    expect(verifyDeviceToken(token, account, now + (DEVICE_TTL_SECONDS - 1) * 1000)).toBe(true);
+    expect(verifyDeviceToken(token, account, now + DEVICE_TTL_SECONDS * 1000)).toBe(false);
+    expect(DEVICE_TTL_SECONDS).toBe(90 * 24 * 60 * 60);
+  });
+
+  it("is bound to the account", () => {
+    const token = createDeviceToken(account, now);
+    expect(verifyDeviceToken(token, "someone-else@example.com", now)).toBe(false);
+    expect(verifyDeviceToken(token, "", now)).toBe(false);
+  });
+
+  it("rejects forged signatures, changed expiry and malformed values", () => {
+    const token = createDeviceToken(account, now) as string;
+    const [version, expiresAt, signature] = token.split(".");
+    const flipped = `${signature[0] === "A" ? "B" : "A"}${signature.slice(1)}`;
+    expect(verifyDeviceToken(`${version}.${expiresAt}.${flipped}`, account, now)).toBe(false);
+    expect(verifyDeviceToken(`${version}.${Number(expiresAt) + 1}.${signature}`, account, now)).toBe(false);
+    expect(verifyDeviceToken(`v2.${expiresAt}.${signature}`, account, now)).toBe(false);
+    expect(verifyDeviceToken(`${token}.x`, account, now)).toBe(false);
+    expect(verifyDeviceToken(`${version}.${expiresAt}.${signature.slice(1)}`, account, now)).toBe(false);
+    expect(verifyDeviceToken(`${token} `, account, now)).toBe(false);
+    expect(verifyDeviceToken("", account, now)).toBe(false);
+    expect(verifyDeviceToken(undefined, account, now)).toBe(false);
+    // A session token is not a device token.
+    expect(verifyDeviceToken(createSessionToken(USER_ID, 1, now), account, now)).toBe(false);
+  });
+
+  it("rejects a token signed with another secret", () => {
+    const token = createDeviceToken(account, now);
+    process.env.AUTH_SECRET = "another-secret-with-at-least-32-bytes";
+    expect(verifyDeviceToken(token, account, now)).toBe(false);
+  });
+
+  it("is neither issued nor accepted without a strong AUTH_SECRET", () => {
+    const token = createDeviceToken(account, now);
+    process.env.AUTH_SECRET = "short";
+    expect(createDeviceToken(account, now)).toBeNull();
+    expect(verifyDeviceToken(token, account, now)).toBe(false);
+    delete process.env.AUTH_SECRET;
+    expect(createDeviceToken(account, now)).toBeNull();
+    expect(verifyDeviceToken(token, account, now)).toBe(false);
+  });
+
+  it("is read from the Cookie header and sent only to /api/auth, httpOnly", () => {
+    const request = new Request("http://localhost/api/auth/login", {
+      headers: { cookie: `a=1; ${ADMIN_DEVICE_COOKIE}=v1.123.abc; ${ADMIN_SESSION_COOKIE}=x` },
+    });
+    expect(readDeviceCookie(request)).toBe("v1.123.abc");
+    expect(readDeviceCookie(new Request("http://localhost/"))).toBeUndefined();
+    expect(deviceCookieOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/api/auth",
+      maxAge: DEVICE_TTL_SECONDS,
+    });
   });
 });
 

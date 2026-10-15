@@ -2,6 +2,7 @@ import { NextResponse, after } from "next/server";
 import {
   beginCheckoutAttempt,
   checkoutRetryAfterSeconds,
+  releaseCheckoutAfterFailure,
   releaseCheckoutAttempt,
 } from "@/lib/checkout-rate-limit";
 import { isDatabaseConfigured } from "@/lib/db";
@@ -75,6 +76,10 @@ export async function POST(request: Request) {
       releaseCheckoutAttempt(ip);
       return NextResponse.json({ error: error.code }, { status: errorStatus[error.code] });
     }
+    // Stripe or the database failed: startCheckout marks the order (if any)
+    // CANCELLED and never returns a payment URL in that case, so the slot is
+    // given back too, up to a cap of failures per window.
+    releaseCheckoutAfterFailure(ip);
     console.error("checkout_failed", error);
     return NextResponse.json({ error: "checkout_failed" }, { status: 502 });
   }

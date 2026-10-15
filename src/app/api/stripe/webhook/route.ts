@@ -26,6 +26,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
   }
 
+  // Our Checkout sessions live on the platform account. Events that happened
+  // on a connected account (event.account set) are never ours to fulfil:
+  // acknowledge them so Stripe stops retrying, but change nothing.
+  if (event.account) {
+    console.warn("stripe_webhook_connected_account_event", event.id);
+    return NextResponse.json({ received: true });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed":

@@ -95,7 +95,10 @@ export function createRateLimiter(options: { max: number; windowMs: number }): R
 /**
  * Sliding-window limiter: at most `max` hits in any `windowMs` interval. Used
  * where a fixed window would allow a burst of 2 * max around the window edge
- * (e.g. checkout sessions). Only the last `max` timestamps per key are kept.
+ * (e.g. checkout sessions). Only the last `max` timestamps per key are kept,
+ * so a per-call limit (third argument of retryAfterSeconds) can only be
+ * stricter: values above `max` are treated as `max`. Build the limiter with
+ * the largest limit any caller will pass.
  */
 export function createSlidingWindowLimiter(options: { max: number; windowMs: number }): RateLimiter {
   const { max, windowMs } = options;
@@ -122,10 +125,11 @@ export function createSlidingWindowLimiter(options: { max: number; windowMs: num
 
   return {
     retryAfterSeconds(key, now = Date.now(), limit = max) {
+      const cap = Math.max(1, Math.min(limit, max));
       const hits = current(key, now);
-      if (!hits || hits.length < limit) return 0;
+      if (!hits || hits.length < cap) return 0;
       // The oldest hits that must leave the window before one more fits.
-      const blocking = hits[hits.length - limit];
+      const blocking = hits[hits.length - cap];
       return Math.max(1, Math.ceil((blocking + windowMs - now) / 1000));
     },
     count(key, now = Date.now()) {
