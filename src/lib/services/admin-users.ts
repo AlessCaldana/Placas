@@ -321,14 +321,14 @@ export async function changeOwnPassword(
   const reason = checkPasswordPolicy(newPassword, user.email);
   if (reason) throw new AdminUserError("weak_password", reason);
   const passwordHash = await hashPassword(newPassword);
-  // Only applies if nothing changed the account meanwhile (another reset or a deactivation).
-  const result = await db.adminUser.updateManyAndReturn({
+  // Only applies if nothing changed the account meanwhile (another reset or a deactivation),
+  // so on success the new version is exactly the one read plus one.
+  const result = await db.adminUser.updateMany({
     where: { id: userId, active: true, sessionVersion: user.sessionVersion },
     data: { passwordHash, sessionVersion: { increment: 1 } },
-    select: { sessionVersion: true },
   });
-  if (result.length !== 1) throw new AdminUserError("no_account");
-  return { sessionVersion: result[0].sessionVersion };
+  if (result.count !== 1) throw new AdminUserError("no_account");
+  return { sessionVersion: user.sessionVersion + 1 };
 }
 
 /**

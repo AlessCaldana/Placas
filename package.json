@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
+    "build:hostinger": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -16,17 +17,18 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "admin:user": "node scripts/admin-user.mjs",
+    "db:copy-from-postgres": "node scripts/copy-pg-to-mysql.mjs",
     "postinstall": "node scripts/postinstall.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
     "@fontsource/instrument-serif": "^5.3.0",
     "@fontsource/shrikhand": "^5.3.0",
-    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/adapter-mariadb": "^7.10.1",
     "@prisma/client": "^7.10.0",
     "dotenv": "^18.0.5",
+    "mariadb": "^3.5.4",
     "next": "16.3.8",
-    "pg": "^8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "stripe": "^23.0.0"
@@ -34,11 +36,11 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.5",
-    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "pg": "^8.23.1",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "prisma": "^7.10.0",
@@ -49,7 +51,7 @@
   "engines": {
     "node": ">=20.19"
   },
-  "description": "Web pública (catálogo) + panel privado de administración. Next.js (App Router) · TypeScript · Tailwind CSS · PostgreSQL · Prisma.",
+  "description": "Web pública (catálogo) + panel privado de administración. Next.js (App Router) · TypeScript · Tailwind CSS · MySQL/MariaDB · Prisma.",
   "main": "index.js",
   "directories": {
     "doc": "docs",

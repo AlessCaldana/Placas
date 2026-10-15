@@ -3,6 +3,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { getDb, isDatabaseConfigured } from "@/lib/db";
 import { site } from "@/lib/site";
+import { uploadDirectory } from "@/lib/uploads";
 import type { ShippingRates } from "@/lib/payments/shipping";
 import { emptySiteLegalInfo, type SiteLegalInfo } from "@/lib/validators/site-legal";
 
@@ -122,7 +123,6 @@ export async function saveSiteSettings(settings: SiteSettings): Promise<SiteSett
   };
 }
 
-const logoDirectory = join(process.cwd(), "public", "uploads", "settings");
 const imageExtensions: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -141,6 +141,7 @@ export async function storeSiteLogo(file: File): Promise<string> {
     (file.type === "image/webp" && signature[0] === 0x52 && signature[1] === 0x49 && signature[2] === 0x46 && signature[3] === 0x46 && signature[8] === 0x57 && signature[9] === 0x45 && signature[10] === 0x42 && signature[11] === 0x50);
   if (!valid) throw new Error("invalid_logo");
 
+  const logoDirectory = uploadDirectory("settings");
   await mkdir(logoDirectory, { recursive: true });
   const fileName = `${randomUUID()}.${imageExtensions[file.type]}`;
   await writeFile(join(logoDirectory, fileName), Buffer.from(await file.arrayBuffer()), { flag: "wx" });
@@ -151,5 +152,5 @@ export async function deleteSiteLogo(url: string | null): Promise<void> {
   if (!url?.startsWith("/uploads/settings/")) return;
   const fileName = url.slice("/uploads/settings/".length);
   if (!fileName || basename(fileName) !== fileName) return;
-  await rm(join(logoDirectory, fileName), { force: true });
+  await rm(join(uploadDirectory("settings"), fileName), { force: true });
 }

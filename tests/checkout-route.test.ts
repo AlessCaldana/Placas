@@ -41,7 +41,7 @@ function checkoutRequest(body: unknown, headers: Record<string, string> = {}) {
 const validCart = { items: [{ productId: PRODUCT, quantity: 1 }], country: "IT", locale: "it" };
 
 beforeEach(() => {
-  process.env.DATABASE_URL = "postgresql://unused:unused@localhost:5432/unused";
+  process.env.DATABASE_URL = "mysql://unused:unused@localhost:3306/unused";
   process.env.STRIPE_SECRET_KEY = "sk_test_unused";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_unused";
   process.env.STRIPE_CONNECTED_ACCOUNT_ID = "acct_unused";

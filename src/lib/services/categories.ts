@@ -49,7 +49,8 @@ export async function createAdminCategory(input: {
     const duplicate = await transaction.category.findFirst({
       where: {
         parentId: input.parentId,
-        name: { equals: input.name, mode: "insensitive" },
+        // The utf8mb4_unicode_ci collation ignores case (and accents) here.
+        name: input.name,
       },
       select: { id: true },
     });

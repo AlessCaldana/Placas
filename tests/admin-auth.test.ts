@@ -80,7 +80,7 @@ beforeEach(() => {
   process.env.ADMIN_EMAIL = "Owner@Example.com";
   process.env.ADMIN_PASSWORD = "a-long-test-password";
   // Never reaches a real database: the service functions are mocked.
-  process.env.DATABASE_URL = "postgresql://unused:unused@localhost:5432/unused";
+  process.env.DATABASE_URL = "mysql://unused:unused@localhost:3306/unused";
   mocks.findSessionUser.mockReset();
   mocks.countAdminUsers.mockReset().mockResolvedValue(1);
 });

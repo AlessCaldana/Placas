@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import readline from "node:readline";
 import dotenv from "dotenv";
-import pg from "pg";
+import mariadb from "mariadb";
 import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -153,29 +153,35 @@ async function askPassword(email) {
 /**
  * Runs work inside a SERIALIZABLE transaction, so the last-superadmin check
  * and the write cannot interleave with a concurrent change (panel or another
- * terminal). Retries serialization failures (SQLSTATE 40001) up to 3 times.
+ * terminal). Retries deadlocks (MySQL/MariaDB error 1213) up to 3 times.
  */
 async function serializable(client, work) {
   for (let attempt = 1; ; attempt += 1) {
-    await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    await client.query("START TRANSACTION");
     try {
       const result = await work();
       await client.query("COMMIT");
       return result;
     } catch (error) {
       await client.query("ROLLBACK").catch(() => {});
-      if (attempt < 3 && error && error.code === "40001") continue;
+      if (attempt < 3 && error && error.errno === 1213) continue;
       throw error;
     }
   }
 }
 
 async function activeSuperadminsExcept(client, id) {
-  const { rows } = await client.query(
-    `SELECT count(*)::int AS total FROM admin_users WHERE role = 'SUPERADMIN' AND active AND id <> $1::uuid`,
+  const rows = await client.query(
+    "SELECT COUNT(*) AS total FROM admin_users WHERE role = 'SUPERADMIN' AND active = 1 AND id <> ?",
     [id ?? "00000000-0000-0000-0000-000000000000"],
   );
-  return rows[0].total;
+  return Number(rows[0].total);
+}
+
+/** The app keeps mysql:// in DATABASE_URL (Prisma); the mariadb driver wants mariadb://. */
+function driverUrl(databaseUrl) {
+  return databaseUrl.replace(/^mysql:/, "mariadb:");
 }
 
 async function main() {
@@ -184,24 +190,26 @@ async function main() {
   }
   if (!process.env.DATABASE_URL) fail("DATABASE_URL no está definida. Revisa tu archivo .env");
 
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  let client;
   try {
-    await client.connect();
+    client = await mariadb.createConnection(driverUrl(process.env.DATABASE_URL));
   } catch {
-    fail("No se pudo conectar a la base de datos. Revisa DATABASE_URL y que PostgreSQL esté en marcha.");
+    fail("No se pudo conectar a la base de datos. Revisa DATABASE_URL y que MySQL/MariaDB esté en marcha.");
   }
 
   try {
-    const table = await client.query(`SELECT to_regclass('public.admin_users') IS NOT NULL AS present`);
-    if (!table.rows[0].present) {
-      fail("Falta la tabla admin_users: aplica antes la migración 20261014100000_admin_users.");
+    const table = await client.query(
+      "SELECT COUNT(*) AS present FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'admin_users'",
+    );
+    if (Number(table[0].present) === 0) {
+      fail("Falta la tabla admin_users: aplica antes las migraciones (npm run db:migrate:deploy).");
     }
 
     console.log("Cuentas del panel PLACA: crear una cuenta o restablecer su contraseña.\n");
     const email = await askEmail();
     const existing = (
-      await client.query(`SELECT id, name, role, active FROM admin_users WHERE email = $1`, [email])
-    ).rows[0];
+      await client.query("SELECT id, name, role, active FROM admin_users WHERE email = ?", [email])
+    )[0];
 
     if (existing) {
       const state = existing.active ? "activa" : "desactivada";
@@ -224,8 +232,8 @@ async function main() {
       const passwordHash = await hashPassword(password);
       await serializable(client, async () => {
         const current = (
-          await client.query(`SELECT active FROM admin_users WHERE id = $1::uuid`, [existing.id])
-        ).rows[0];
+          await client.query("SELECT active FROM admin_users WHERE id = ? FOR UPDATE", [existing.id])
+        )[0];
         if (!current) throw new Refused("La cuenta ya no existe. Sin cambios.");
         const staysActiveSuperadmin = (current.active || reactivate) && role === "SUPERADMIN";
         if (!staysActiveSuperadmin && (await activeSuperadminsExcept(client, existing.id)) === 0) {
@@ -233,9 +241,9 @@ async function main() {
         }
         await client.query(
           `UPDATE admin_users
-              SET "passwordHash" = $1, role = $2::"AdminRole", active = active OR $3,
-                  "sessionVersion" = "sessionVersion" + 1, "updatedAt" = now()
-            WHERE id = $4::uuid`,
+              SET passwordHash = ?, role = ?, active = active OR ?,
+                  sessionVersion = sessionVersion + 1, updatedAt = UTC_TIMESTAMP(3)
+            WHERE id = ?`,
           [passwordHash, role, reactivate, existing.id],
         );
       });
@@ -259,13 +267,13 @@ async function main() {
           throw new Refused(firstSuperadminMessage);
         }
         await client.query(
-          `INSERT INTO admin_users (id, email, name, role, "passwordHash", active, "sessionVersion", "createdAt", "updatedAt")
-           VALUES ($1::uuid, $2, $3, $4::"AdminRole", $5, true, 0, now(), now())`,
+          `INSERT INTO admin_users (id, email, name, role, passwordHash, active, sessionVersion, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, 1, 0, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))`,
           [randomUUID(), email, name, role, passwordHash],
         );
       });
     } catch (error) {
-      if (error && error.code === "23505") throw new Refused("Ese email ya está en uso. Sin cambios.");
+      if (error && error.errno === 1062) throw new Refused("Ese email ya está en uso. Sin cambios.");
       throw error;
     }
     console.log(`Cuenta creada: ${email} (${role.toLowerCase()}).`);
@@ -285,7 +293,7 @@ async function main() {
     console.error(`Error inesperado al guardar la cuenta${code}.`);
     process.exitCode = 1;
   } finally {
-    await client.end().catch(() => {});
+    await client?.end().catch(() => {});
   }
 }
 

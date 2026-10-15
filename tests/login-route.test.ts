@@ -48,7 +48,7 @@ function loginRequest(body: unknown, headers: Record<string, string> = {}) {
 
 beforeEach(() => {
   process.env.AUTH_SECRET = "test-secret-with-at-least-32-bytes!!";
-  process.env.DATABASE_URL = "postgresql://unused:unused@localhost:5432/unused";
+  process.env.DATABASE_URL = "mysql://unused:unused@localhost:3306/unused";
   delete process.env.TRUSTED_PROXY_HOPS;
   mocks.countAdminUsers.mockReset().mockResolvedValue(1);
   mocks.findLoginUser.mockReset().mockResolvedValue(null);

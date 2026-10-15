@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { bufferRequestWithinLimit } from "@/lib/request-body";
+import { uploadDirectory } from "@/lib/uploads";
 
 export const maxProductImageCount = 8;
 export const maxProductImageSize = 5 * 1024 * 1024;
@@ -75,10 +76,9 @@ export async function bufferRequestWithinProductImageLimit(
   return bufferRequestWithinLimit(request, limit);
 }
 
-const uploadDirectory = join(process.cwd(), "public", "uploads", "products");
-
 export async function storeProductImageFiles(files: File[]): Promise<string[]> {
-  await mkdir(uploadDirectory, { recursive: true });
+  const directory = uploadDirectory("products");
+  await mkdir(directory, { recursive: true });
   const urls: string[] = [];
 
   try {
@@ -86,7 +86,7 @@ export async function storeProductImageFiles(files: File[]): Promise<string[]> {
       const extension = imageExtensions[file.type];
       const fileName = `${randomUUID()}.${extension}`;
       const bytes = Buffer.from(await file.arrayBuffer());
-      await writeFile(join(uploadDirectory, fileName), bytes, { flag: "wx" });
+      await writeFile(join(directory, fileName), bytes, { flag: "wx" });
       urls.push(`/uploads/products/${fileName}`);
     }
     return urls;
@@ -103,7 +103,7 @@ export async function deleteProductImageFiles(urls: string[]): Promise<void> {
         ? url.slice("/uploads/products/".length)
         : "";
       if (!fileName || basename(fileName) !== fileName) return;
-      await rm(join(uploadDirectory, fileName), { force: true });
+      await rm(join(uploadDirectory("products"), fileName), { force: true });
     }),
   );
 }

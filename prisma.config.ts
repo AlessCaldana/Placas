@@ -8,6 +8,6 @@ export default defineConfig({
     // `prisma generate` no necesita conexión real; migrate sí (fallará con error claro de conexión).
     url:
       process.env.DATABASE_URL ??
-      "postgresql://placeholder:placeholder@localhost:5432/placeholder",
+      "mysql://placeholder:placeholder@localhost:3306/placeholder",
   },
 });
