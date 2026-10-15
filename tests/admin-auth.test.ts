@@ -328,6 +328,21 @@ describe("isCrossOriginRequest", () => {
     expect(isCrossOriginRequest(make({ origin: "null" }))).toBe(true);
     expect(isCrossOriginRequest(make({ "sec-fetch-site": "cross-site" }))).toBe(true);
   });
+
+  it("accepts the public domain behind a reverse proxy, where Next builds request.url from localhost", () => {
+    // nginx forwards the browser's Host; Next still reports http://localhost:3000.
+    expect(isCrossOriginRequest(make({ origin: "https://pfdeco.example", host: "pfdeco.example" }))).toBe(false);
+    const previous = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = "https://pfdeco.example";
+    try {
+      expect(isCrossOriginRequest(make({ origin: "https://pfdeco.example" }))).toBe(false);
+      // Another site is still rejected, even with the site URL configured.
+      expect(isCrossOriginRequest(make({ origin: "https://evil.example", host: "pfdeco.example" }))).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = previous;
+    }
+  });
 });
 
 describe("login rate limit", () => {
