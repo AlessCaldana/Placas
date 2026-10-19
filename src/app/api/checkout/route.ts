@@ -6,6 +6,7 @@ import {
   releaseCheckoutAttempt,
 } from "@/lib/checkout-rate-limit";
 import { isDatabaseConfigured } from "@/lib/db";
+import { rejectDuringMaintenance } from "@/lib/maintenance-guard";
 import { isShippingCountry } from "@/lib/payments/shipping";
 import { isStripeConfigured } from "@/lib/payments/stripe";
 import { clientIp } from "@/lib/rate-limit";
@@ -39,6 +40,8 @@ export async function POST(request: Request) {
   if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
+  const maintenance = await rejectDuringMaintenance();
+  if (maintenance) return maintenance;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   if (!isDatabaseConfigured() || !isStripeConfigured() || !siteUrl) {
     return NextResponse.json({ error: "payments_unavailable" }, { status: 503 });

@@ -160,6 +160,10 @@ model SiteSetting {
   legalAddress       String?  @db.VarChar(255)
   pecEmail           String?  @db.VarChar(254)
   reaNumber          String?  @db.VarChar(40)
+  // Maintenance mode (SUPERADMIN only): public checkout, reviews, tracking and
+  // view counting answer 503 while it is on. The message is shown to visitors.
+  maintenanceMode    Boolean  @default(false)
+  maintenanceMessage String?  @db.VarChar(300)
   updatedAt          DateTime @default(now()) @updatedAt @db.DateTime(3)
 
   @@map("site_settings")

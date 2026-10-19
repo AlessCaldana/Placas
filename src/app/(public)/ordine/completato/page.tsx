@@ -5,6 +5,7 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { Icon } from "@/components/ui/Icon";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getRequestLocale } from "@/lib/locale";
+import { isMaintenanceVisitor } from "@/lib/maintenance-view";
 import { getStripe, isStripeConfigured } from "@/lib/payments/stripe";
 import { isKnownCheckoutSession } from "@/lib/services/orders";
 import { getReviewEligibility, type ReviewEligibility } from "@/lib/services/reviews";
@@ -52,6 +53,8 @@ export default async function OrderCompletedPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  // Maintenance: the layout shows the maintenance page; no database or Stripe lookups.
+  if (await isMaintenanceVisitor()) return null;
   const locale = await getRequestLocale();
   const t = (key: string) => translate(locale, key);
   const rawSessionId = (await searchParams).session_id;

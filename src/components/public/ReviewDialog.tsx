@@ -21,6 +21,7 @@ const apiErrorKeys: Record<string, string> = {
   not_allowed: "review.errorNotAllowed",
   already_reviewed: "review.errorAlready",
   too_many_requests: "review.errorTooMany",
+  maintenance: "maintenance.apiError",
 };
 
 function normalizeName(value: string): string {

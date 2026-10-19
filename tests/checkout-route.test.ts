@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   startCheckout: vi.fn(),
   maybeDeleteStaleUnpaidOrders: vi.fn(),
   after: vi.fn(),
+  isMaintenanceActive: vi.fn(),
 }));
 
 vi.mock("next/server", async (importOriginal) => ({
@@ -15,6 +16,11 @@ vi.mock("@/lib/services/orders", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/services/orders")>()),
   startCheckout: mocks.startCheckout,
   maybeDeleteStaleUnpaidOrders: mocks.maybeDeleteStaleUnpaidOrders,
+}));
+
+vi.mock("@/lib/services/maintenance", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/services/maintenance")>()),
+  isMaintenanceActive: mocks.isMaintenanceActive,
 }));
 
 import { POST as checkout } from "@/app/api/checkout/route";
@@ -48,6 +54,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
   mocks.startCheckout.mockReset().mockResolvedValue("https://checkout.stripe.com/c/pay/cs_test_x");
   mocks.after.mockReset();
+  mocks.isMaintenanceActive.mockReset().mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -123,6 +130,36 @@ describe("checkout guard", () => {
 });
 
 describe("POST /api/checkout", () => {
+  it("answers 503 maintenance while maintenance mode is on, without spending the quota", async () => {
+    process.env.TRUSTED_PROXY_HOPS = "1";
+    const headers = { "x-forwarded-for": "198.51.100.60" };
+    mocks.isMaintenanceActive.mockResolvedValue(true);
+    for (let index = 0; index < CHECKOUT_PER_IP_MAX + 2; index += 1) {
+      const response = await checkout(checkoutRequest(validCart, headers));
+      expect(response.status).toBe(503);
+      expect(response.headers.get("retry-after")).toBe("3600");
+      expect(await response.json()).toEqual({ error: "maintenance" });
+    }
+    expect(mocks.startCheckout).not.toHaveBeenCalled();
+    expect(mocks.after).not.toHaveBeenCalled();
+
+    // Switched off: the same buyer pays as usual, with the full quota.
+    mocks.isMaintenanceActive.mockResolvedValue(false);
+    for (let index = 0; index < CHECKOUT_PER_IP_MAX; index += 1) {
+      const response = await checkout(checkoutRequest(validCart, headers));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ url: "https://checkout.stripe.com/c/pay/cs_test_x" });
+    }
+    expect(mocks.startCheckout).toHaveBeenCalledTimes(CHECKOUT_PER_IP_MAX);
+  });
+
+  it("still refuses cross-site requests first while in maintenance", async () => {
+    mocks.isMaintenanceActive.mockResolvedValue(true);
+    const response = await checkout(checkoutRequest(validCart, { origin: "https://evil.example" }));
+    expect(response.status).toBe(403);
+    expect(mocks.isMaintenanceActive).not.toHaveBeenCalled();
+  });
+
   it("refuses bodies over 16 KB with 413 before creating anything", async () => {
     const response = await checkout(checkoutRequest({ ...validCart, padding: "x".repeat(17 * 1024) }));
     expect(response.status).toBe(413);

@@ -23,6 +23,7 @@ const apiErrorKeys: Record<string, string> = {
   not_found: "track.errorNotFound",
   invalid_request: "track.errorInvalid",
   too_many_requests: "track.errorTooMany",
+  maintenance: "maintenance.apiError",
 };
 
 function normalizeOrderNumber(value: string): string | null {

@@ -3321,3 +3321,272 @@ footer :focus-visible {
     width: 100%;
   }
 }
+
+/* ---------- Modo mantenimiento ---------- */
+/*
+ * Página que ven los visitantes con el modo activo: el rojo del hero con las rayas 70
+ * (HeroStripes) abajo a la derecha, el sello grande y los contactos.
+ * Texto crema sobre #b8432a–#7a2230: ≥ 5,4:1.
+ */
+.maintenance-page {
+  --stripe-scale: 1;
+  position: relative;
+  isolation: isolate;
+  /* clip, not hidden: a hidden box can still be scrolled sideways (e.g. when the
+     language menu opens) and the oversized stripes would shift the content. */
+  overflow: hidden;
+  overflow: clip;
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: #fff6ec;
+  background:
+    radial-gradient(70% 60% at 0% 100%, #5e1a26cc 0, transparent 70%),
+    linear-gradient(215deg, var(--r70-red) 0%, var(--r70-red-dark) 48%, var(--r70-wine) 100%);
+}
+.maintenance-page :focus-visible {
+  outline-color: var(--gold-2);
+}
+.maintenance-page .hero-stripes.is-standalone {
+  left: max(64%, 720px);
+  top: 36%;
+}
+.maintenance-top {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 34px 11px;
+  color: var(--r70-cream);
+  background: linear-gradient(
+    to top,
+    var(--r70-orange) 0 4px,
+    var(--r70-brown-dark) 4px 7px,
+    var(--r70-mustard) 7px 11px,
+    var(--r70-brown-dark) 11px
+  );
+}
+.maintenance-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 48px 34px 120px;
+}
+.maintenance-content {
+  width: 100%;
+  max-width: 620px;
+  min-width: 0;
+}
+.maintenance-content > .brand-seal {
+  display: block;
+  margin-bottom: 26px;
+  filter: drop-shadow(5px 5px 0 #3d221699);
+}
+.maintenance-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: #fff6e8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+.maintenance-eyebrow span {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 7px;
+  background: linear-gradient(
+    to bottom,
+    var(--r70-mustard) 0 3px,
+    transparent 3px 4px,
+    var(--r70-orange) 4px 7px
+  );
+}
+.maintenance-content h1 {
+  margin: 0 0 22px;
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: clamp(46px, 6vw, 84px);
+  line-height: 1.04;
+  letter-spacing: 0;
+  overflow-wrap: break-word;
+  text-shadow: 0.05em 0.05em 0 var(--r70-brown);
+}
+.maintenance-text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.7;
+}
+/* Nota del propietario: tarjeta crema con la doble raya 70 arriba (texto marrón 13:1). */
+.maintenance-note {
+  margin-top: 30px;
+  padding: 24px 22px 20px;
+  border: 2px solid var(--r70-brown-dark);
+  border-radius: 10px;
+  color: var(--r70-brown-dark);
+  background:
+    linear-gradient(
+      to bottom,
+      var(--r70-mustard) 0 4px,
+      var(--r70-brown-dark) 4px 6px,
+      var(--r70-orange) 6px 10px,
+      transparent 10px
+    ),
+    var(--r70-cream);
+  box-shadow: 6px 6px 0 #3d2216b3;
+}
+.maintenance-note h2 {
+  margin: 0 0 6px;
+  color: var(--r70-red-text);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.maintenance-note p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.maintenance-contact {
+  margin-top: 34px;
+}
+.maintenance-contact h2 {
+  margin: 0 0 6px;
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+.maintenance-contact p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.maintenance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.maintenance-actions .btn {
+  min-height: 52px;
+  font-size: 14px;
+  text-align: left;
+}
+.maintenance-actions .btn-gold {
+  background: var(--r70-mustard);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--r70-brown);
+}
+.maintenance-actions .btn-gold:hover {
+  background: #eab33c;
+}
+.maintenance-actions .btn-light {
+  border-color: #ffffffb8;
+  background: #ffffff0f;
+  color: #fff6ec;
+}
+.maintenance-actions .btn-light:hover {
+  background: #ffffff1f;
+}
+.maintenance-actions .btn-light span {
+  display: grid;
+  gap: 2px;
+  padding: 6px 0;
+}
+.maintenance-actions .btn-light small {
+  font-weight: 500;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1050px) {
+  .maintenance-page {
+    --stripe-scale: 0.58;
+  }
+  .maintenance-page .hero-stripes.is-standalone {
+    left: 52%;
+    top: calc(100% - 96px);
+  }
+  .maintenance-main {
+    padding-bottom: 150px;
+  }
+}
+@media (max-width: 760px) {
+  .maintenance-top {
+    padding: 0 16px 11px;
+  }
+  .maintenance-main {
+    align-items: flex-start;
+    padding: 32px 16px 140px;
+  }
+  .maintenance-content > .brand-seal {
+    width: 104px;
+    height: 104px;
+    margin-bottom: 20px;
+  }
+  .maintenance-content h1 {
+    font-size: clamp(38px, 12vw, 52px);
+  }
+  .maintenance-text {
+    font-size: 16px;
+  }
+  .maintenance-note {
+    padding: 22px 16px 16px;
+  }
+  .maintenance-actions {
+    flex-direction: column;
+  }
+  .maintenance-actions .btn {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Franja para el admin con sesión: ve la web normal, pero sabe que está cerrada. */
+.maintenance-admin-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 18px;
+  padding: 10px 16px;
+  color: var(--r70-brown-dark);
+  background: var(--r70-mustard-light);
+  border-bottom: 3px solid var(--r70-brown-dark);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+.maintenance-admin-bar p {
+  margin: 0;
+}
+.maintenance-admin-bar a {
+  color: var(--r70-brown-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.maintenance-admin-bar a:hover {
+  color: var(--r70-wine);
+}
+.maintenance-admin-bar :focus-visible {
+  outline-color: var(--r70-brown-dark);
+}

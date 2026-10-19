@@ -1,4 +1,5 @@
 import { getDb, isDatabaseConfigured } from "@/lib/db";
+import { rejectDuringMaintenance } from "@/lib/maintenance-guard";
 import { clientIp, createRateLimiter } from "@/lib/rate-limit";
 import { isCrossOriginRequest } from "@/lib/request-origin";
 import { isProductId } from "@/lib/validators/product";
@@ -20,6 +21,8 @@ export async function POST(
   if (isCrossOriginRequest(request)) {
     return Response.json({ error: "invalid_request" }, { status: 403 });
   }
+  const maintenance = await rejectDuringMaintenance();
+  if (maintenance) return maintenance;
   if (!isDatabaseConfigured()) {
     return Response.json({ error: "Database unavailable" }, { status: 503 });
   }

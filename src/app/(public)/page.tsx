@@ -2,6 +2,7 @@ import { HomePage } from "@/components/public/HomePage";
 import { demoCategories, demoProducts } from "@/lib/demo-data";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getRequestLocale } from "@/lib/locale";
+import { isMaintenanceVisitor } from "@/lib/maintenance-view";
 import { isStripeConfigured } from "@/lib/payments/stripe";
 import { listPublicCategories } from "@/lib/services/categories";
 import { buildProductSearchText } from "@/lib/product-translations";
@@ -25,6 +26,8 @@ async function loadPublishedReviews(): Promise<PublicReview[]> {
 }
 
 export default async function Home() {
+  // Maintenance: the layout shows the maintenance page; render and load nothing here.
+  if (await isMaintenanceVisitor()) return null;
   const reviewsPromise = loadPublishedReviews();
   let settings = defaultSiteSettings();
   try {

@@ -58,6 +58,29 @@ describe.skipIf(!url)("MySQL/MariaDB database", () => {
     await expect(changeOwnPassword(user.id, password, `${password}-again`)).rejects.toThrow();
   });
 
+  it("saves and reads maintenance mode, restoring the previous settings afterwards", async () => {
+    const { getDb } = await import("@/lib/db");
+    const { readMaintenanceState, setMaintenanceState } = await import("@/lib/services/maintenance");
+    const db = getDb();
+    const previous = await db.siteSetting.findUnique({
+      where: { id: "default" },
+      select: { maintenanceMode: true, maintenanceMessage: true },
+    });
+    cleanup.push(() =>
+      previous
+        ? db.siteSetting.update({ where: { id: "default" }, data: previous })
+        : db.siteSetting.deleteMany({ where: { id: "default" } }),
+    );
+
+    const message = `DEMO manutenzione ${tag} è`;
+    expect(await setMaintenanceState({ enabled: true, message })).toEqual({ enabled: true, message });
+    expect(await readMaintenanceState()).toEqual({ enabled: true, message });
+    expect(await setMaintenanceState({ enabled: false, message: "" })).toEqual({ enabled: false, message: "" });
+    const stored = await db.siteSetting.findUniqueOrThrow({ where: { id: "default" } });
+    expect(stored.maintenanceMessage).toBeNull();
+    expect(stored.name.length).toBeGreaterThan(0);
+  });
+
   it("marks a paid order once, discounts stock and keeps the address JSON", async () => {
     const { getDb } = await import("@/lib/db");
     const { fulfillPaidSession } = await import("@/lib/services/orders");

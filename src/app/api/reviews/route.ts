@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
+import { rejectDuringMaintenance } from "@/lib/maintenance-guard";
 import { UNKNOWN_CLIENT, clientIp, createRateLimiter } from "@/lib/rate-limit";
 import { bodyErrorResponse, readBoundedJson } from "@/lib/request-body";
 import { createReview, parseReviewInput } from "@/lib/services/reviews";
@@ -18,6 +19,8 @@ export async function POST(request: Request) {
   if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
+  const maintenance = await rejectDuringMaintenance();
+  if (maintenance) return maintenance;
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }

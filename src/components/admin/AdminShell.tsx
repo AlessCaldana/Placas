@@ -39,11 +39,14 @@ export function AdminShell({
   showLogout,
   shopName,
   user,
+  maintenance = false,
 }: {
   children: ReactNode;
   showLogout: boolean;
   shopName: string;
   user: AdminShellUser;
+  /** Maintenance mode is on: every admin page shows a notice. */
+  maintenance?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -137,6 +140,15 @@ export function AdminShell({
             {shopName}
           </b>
         </div>
+        {maintenance && (
+          <aside className="admin-maintenance-bar" aria-label={t("admin.maintenance.bannerLabel")}>
+            <Icon name="lock" size={18} />
+            <p>{t("admin.maintenance.banner")}</p>
+            {pathname !== "/admin/impostazioni" && (
+              <Link href="/admin/impostazioni#manutenzione">{t("admin.maintenance.bannerLink")}</Link>
+            )}
+          </aside>
+        )}
         <main className="admin-main">{children}</main>
       </div>
     </div>

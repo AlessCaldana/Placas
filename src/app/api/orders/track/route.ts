@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
+import { rejectDuringMaintenance } from "@/lib/maintenance-guard";
 import { UNKNOWN_CLIENT, clientIp, createRateLimiter } from "@/lib/rate-limit";
 import { readBoundedJson } from "@/lib/request-body";
 import { lookupOrderTracking } from "@/lib/services/shipments";
@@ -23,6 +24,8 @@ function json(body: unknown, status = 200, headers: Record<string, string> = {})
 
 export async function POST(request: Request) {
   if (isCrossOriginRequest(request)) return json({ error: "invalid_request" }, 403);
+  const maintenance = await rejectDuringMaintenance();
+  if (maintenance) return maintenance;
   if (!isDatabaseConfigured()) return json({ error: "database_not_configured" }, 503);
 
   const ip = clientIp(request);

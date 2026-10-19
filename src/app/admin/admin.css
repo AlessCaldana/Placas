@@ -2677,3 +2677,126 @@ a.dashboard-task > svg {
     justify-content: flex-start;
   }
 }
+
+/* ---------- Modo mantenimiento ---------- */
+/* Franja en todas las páginas del panel mientras la web pública está cerrada. */
+.admin-maintenance-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 40px;
+  color: var(--a70-brown-dark);
+  background: var(--a70-mustard-light);
+  border-bottom: 3px solid var(--a70-brown-dark);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.admin-maintenance-bar p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.admin-maintenance-bar a {
+  color: var(--a70-brown-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.admin-maintenance-bar a:hover {
+  color: var(--a70-wine);
+}
+.admin-maintenance-bar :focus-visible {
+  outline: 2px solid var(--a70-brown-dark);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .admin-maintenance-bar {
+    padding: 10px 14px;
+  }
+}
+
+/* Tarjeta de Impostazioni: borde rojo cuando la web está cerrada. */
+.maintenance-card {
+  margin-bottom: 16px;
+}
+.maintenance-card.is-on {
+  border: 2px solid var(--a70-red);
+  box-shadow: 4px 4px 0 var(--a70-red-tint);
+}
+.maintenance-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 18px 0 4px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--a70-bg);
+}
+.maintenance-state-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.maintenance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 15px;
+  color: var(--a70-ok-text);
+  background: var(--a70-ok-tint);
+  border: 1px solid #c3c98f;
+}
+.maintenance-pill span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--a70-ok);
+}
+.maintenance-pill.is-on {
+  color: #fff;
+  background: var(--a70-red-text);
+  border-color: var(--a70-red-text);
+}
+.maintenance-pill.is-on span {
+  background: var(--a70-mustard-light);
+}
+.maintenance-state-hint {
+  flex: 1 1 220px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.maintenance-message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 14px;
+}
+.maintenance-count {
+  font-variant-numeric: tabular-nums;
+}
+.maintenance-switch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.maintenance-readonly-message {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 10px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.maintenance-readonly-message span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .maintenance-switch-actions .btn {
+    width: 100%;
+  }
+}

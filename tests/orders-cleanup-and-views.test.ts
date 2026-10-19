@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const db = vi.hoisted(() => ({
   order: { deleteMany: vi.fn(), findUnique: vi.fn() },
   product: { updateMany: vi.fn() },
+  siteSetting: { findUnique: vi.fn() },
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -11,6 +12,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { POST as recordView } from "@/app/api/catalog/products/[id]/view/route";
+import { clearMaintenanceCache } from "@/lib/services/maintenance";
 import {
   STALE_CANCELLED_ORDER_DAYS,
   STALE_PENDING_ORDER_DAYS,
@@ -25,6 +27,8 @@ beforeEach(() => {
   db.order.deleteMany.mockReset().mockResolvedValue({ count: 2 });
   db.order.findUnique.mockReset().mockResolvedValue(null);
   db.product.updateMany.mockReset().mockResolvedValue({ count: 1 });
+  db.siteSetting.findUnique.mockReset().mockResolvedValue(null);
+  clearMaintenanceCache();
 });
 
 afterEach(() => {
@@ -110,5 +114,14 @@ describe("POST /api/catalog/products/[id]/view", () => {
   it("refuses cross-site requests", async () => {
     const id = "4b6f5d3e-8f1c-4d2a-9a37-2c1e5b7d9f01";
     expect((await view(id, { origin: "https://evil.example" })).status).toBe(403);
+  });
+
+  it("does not count views while maintenance mode is on", async () => {
+    db.siteSetting.findUnique.mockResolvedValue({ maintenanceMode: true, maintenanceMessage: null });
+    const response = await view("5b6f5d3e-8f1c-4d2a-9a37-2c1e5b7d9f01");
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("3600");
+    expect(await response.json()).toEqual({ error: "maintenance" });
+    expect(db.product.updateMany).not.toHaveBeenCalled();
   });
 });

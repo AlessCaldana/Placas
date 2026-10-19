@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { canManageUsers, requireAdminPage } from "@/lib/admin-auth";
+import { getMaintenanceState } from "@/lib/services/maintenance";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 import "@fontsource/shrikhand/latin-400.css";
 import "./admin.css";
@@ -28,9 +29,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const shopName = await getSiteSettings()
     .then((settings) => settings.name)
     .catch(() => defaultSiteSettings().name);
+  const maintenance = await getMaintenanceState();
   return (
     // Only the local development identity (ADMIN_AUTH=off on this machine) has no session to close.
-    <AdminShell showLogout={!identity.dev} shopName={shopName} user={user}>
+    <AdminShell showLogout={!identity.dev} shopName={shopName} user={user} maintenance={maintenance.enabled}>
       {children}
     </AdminShell>
   );
