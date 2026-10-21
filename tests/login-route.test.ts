@@ -163,6 +163,28 @@ describe("POST /api/auth/login", () => {
     expect(verifyDeviceToken(device?.value, "other@example.com")).toBe(false);
   });
 
+  it("refuses accent and width variants of the stored email, even with the right password", async () => {
+    // MySQL utf8mb4_unicode_ci returns the "maria@example.com" row for these too.
+    mocks.findLoginUser.mockResolvedValue({
+      id: USER_ID,
+      email: "maria@example.com",
+      name: "Maria",
+      role: "ADMIN",
+      active: true,
+      sessionVersion: 2,
+      passwordHash: "scrypt$...",
+    });
+    mocks.verifyPassword.mockResolvedValue(true);
+    mocks.verifyAgainstDummyHash.mockResolvedValue(false);
+    for (const email of ["maría@example.com", "ｍaria@example.com", "maria@exämple.com"]) {
+      const response = await login(loginRequest({ email, password: "right" }));
+      expect(response.status).toBe(401);
+      expect(response.cookies.get(ADMIN_SESSION_COOKIE)?.value).toBeFalsy();
+    }
+    expect(mocks.verifyPassword).not.toHaveBeenCalled();
+    expect(mocks.recordAdminLogin).not.toHaveBeenCalled();
+  });
+
   it("does not issue the device cookie on failed logins", async () => {
     const response = await login(loginRequest({ email: "no-device@example.com", password: "wrong" }));
     expect(response.status).toBe(401);

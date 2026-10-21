@@ -1,13 +1,12 @@
 import type { NextConfig } from "next";
 
-// Must equal maxProductImageRequestSize in src/lib/product-images.ts (8 photos
-// of 5 MB + 1 MB of form fields = 41 MiB; checked by tests/security-config.test.ts).
-// src/proxy.ts runs on /admin and /api/admin, and Next buffers the body of every
-// request it handles up to this size; with the default (10 MB) larger photo
-// uploads were silently truncated. Route handlers enforce their own, smaller
-// limits (src/lib/request-body.ts). In production also cap the body size in the
-// reverse proxy (nginx: `client_max_body_size 42m;`).
-const PROXY_CLIENT_MAX_BODY_SIZE = 41 * 1024 * 1024;
+// Next buffers in memory the body of every request src/proxy.ts handles, before
+// the proxy decides. The proxy only runs on the /admin pages, which never
+// receive uploads, so 1 MB is plenty. Photo uploads go to /api/admin, which the
+// proxy does not match: those handlers check the session first and then apply
+// their own limits (src/lib/request-body.ts, src/lib/product-images.ts).
+// Checked by tests/security-config.test.ts.
+const PROXY_CLIENT_MAX_BODY_SIZE = "1mb";
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },

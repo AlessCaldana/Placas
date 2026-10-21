@@ -57,7 +57,11 @@ async function judgeCredentials(email: string, password: string): Promise<Outcom
 
   try {
     const normalizedEmail = parseAdminEmail(email);
-    const user = normalizedEmail ? await findLoginUser(normalizedEmail) : null;
+    const found = normalizedEmail ? await findLoginUser(normalizedEmail) : null;
+    // The database ignores accents and letter width when comparing emails
+    // (utf8mb4_unicode_ci): only the exact stored email may sign in, so a
+    // variant such as "ówner@…" is handled like an unknown account.
+    const user = found && found.email === normalizedEmail ? found : null;
     // Unknown emails still pay for one scrypt run, so the response time does
     // not reveal which emails have an account. Inactive accounts are checked
     // the same way and then refused.

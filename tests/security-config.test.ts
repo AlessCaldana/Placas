@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { maxProductImageRequestSize } from "@/lib/product-images";
+import { config as proxyConfig } from "@/proxy";
 
 const root = path.resolve(import.meta.dirname, "..");
 
@@ -15,9 +15,9 @@ afterEach(() => {
 });
 
 describe("next.config", () => {
-  it("lets the proxy buffer exactly the product upload limit", async () => {
+  it("keeps the proxy body buffer small (1 MB)", async () => {
     const config = await loadConfig();
-    expect(config.experimental?.proxyClientMaxBodySize).toBe(maxProductImageRequestSize);
+    expect(config.experimental?.proxyClientMaxBodySize).toBe("1mb");
   });
 
   it("sends HSTS only in production", async () => {
@@ -33,6 +33,12 @@ describe("next.config", () => {
       "Strict-Transport-Security",
       "max-age=31536000; includeSubDomains",
     ]);
+  });
+});
+
+describe("proxy", () => {
+  it("runs on the admin pages only, never on /api/admin (no pre-auth body buffering there)", () => {
+    expect(proxyConfig.matcher).toEqual(["/admin/:path*"]);
   });
 });
 
