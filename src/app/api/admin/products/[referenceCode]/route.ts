@@ -16,14 +16,9 @@ import { isCrossOriginRequest } from "@/lib/request-origin";
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ referenceCode: string }> };
 
-function enabled() {
-  return process.env.NODE_ENV !== "production" || process.env.ADMIN_PREVIEW === "1";
-}
-
 export async function GET(request: Request, { params }: RouteContext) {
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   try {
     const { referenceCode } = await params;
@@ -42,7 +37,6 @@ export async function PUT(request: Request, { params }: RouteContext) {
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   if (contentLengthExceedsProductImageLimit(request.headers.get("content-length"))) {
     return NextResponse.json({ error: "request_too_large" }, { status: 413 });
@@ -100,7 +94,6 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }

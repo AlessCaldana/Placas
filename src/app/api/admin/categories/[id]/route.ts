@@ -7,10 +7,6 @@ import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
-function enabled() {
-  return process.env.NODE_ENV !== "production" || process.env.ADMIN_PREVIEW === "1";
-}
-
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -20,7 +16,6 @@ export async function PATCH(
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }
@@ -51,7 +46,6 @@ export async function DELETE(
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }

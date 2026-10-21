@@ -10,10 +10,6 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 2 * 1024;
 
-function enabled() {
-  return process.env.NODE_ENV !== "production" || process.env.ADMIN_PREVIEW === "1";
-}
-
 // Defence in depth on top of the SameSite session cookie.
 async function readJsonBody(request: Request): Promise<unknown> {
   // Stops reading as soon as the body exceeds the limit.
@@ -31,7 +27,6 @@ export async function PATCH(
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }
@@ -60,7 +55,6 @@ export async function DELETE(
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }

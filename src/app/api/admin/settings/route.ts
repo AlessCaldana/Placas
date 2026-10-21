@@ -24,14 +24,9 @@ function parseShippingCents(value: FormDataEntryValue | null): number | null | u
   return Number(match[1]) * 100 + Number((match[2] ?? "0").padEnd(2, "0"));
 }
 
-function enabled() {
-  return process.env.NODE_ENV !== "production" || process.env.ADMIN_PREVIEW === "1";
-}
-
 export async function GET(request: Request) {
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   try {
     return NextResponse.json(await getSiteSettings());
@@ -46,7 +41,6 @@ export async function PUT(request: Request) {
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!enabled()) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   const boundedRequest = await bufferRequestWithinProductImageLimit(request, 6 * 1024 * 1024);
   if (!boundedRequest) {

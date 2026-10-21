@@ -15,10 +15,6 @@ import { isCrossOriginRequest } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
-function isAdminApiEnabled(): boolean {
-  return process.env.NODE_ENV !== "production" || process.env.ADMIN_PREVIEW === "1";
-}
-
 function unavailableResponse() {
   return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
 }
@@ -26,9 +22,6 @@ function unavailableResponse() {
 export async function GET(request: Request) {
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!isAdminApiEnabled()) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
   if (!isDatabaseConfigured()) return unavailableResponse();
 
   try {
@@ -44,9 +37,6 @@ export async function POST(request: Request) {
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!isAdminApiEnabled()) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
   if (!isDatabaseConfigured()) return unavailableResponse();
   if (contentLengthExceedsProductImageLimit(request.headers.get("content-length"))) {
     return NextResponse.json({ error: "request_too_large" }, { status: 413 });

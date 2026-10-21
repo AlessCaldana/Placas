@@ -16,19 +16,12 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ referenceCode: string }> };
 
-function isAdminApiEnabled(): boolean {
-  return process.env.NODE_ENV !== "production" || process.env.ADMIN_PREVIEW === "1";
-}
-
 export async function PUT(request: Request, { params }: RouteContext) {
   if (isCrossOriginRequest(request)) {
     return NextResponse.json({ error: "invalid_request" }, { status: 403 });
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return denied;
-  if (!isAdminApiEnabled()) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
   }

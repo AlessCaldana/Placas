@@ -11,10 +11,6 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 2 * 1024;
 
-function enabled() {
-  return process.env.NODE_ENV !== "production" || process.env.ADMIN_PREVIEW === "1";
-}
-
 // Defence in depth on top of the SameSite session cookie.
 async function readJsonBody(request: Request): Promise<unknown> {
   // Stops reading as soon as the body exceeds the limit.
@@ -33,7 +29,6 @@ async function guard(
   }
   const denied = await rejectWithoutAdminSession(request);
   if (denied) return { response: denied };
-  if (!enabled()) return { response: NextResponse.json({ error: "not_found" }, { status: 404 }) };
   if (!isDatabaseConfigured()) {
     return { response: NextResponse.json({ error: "database_not_configured" }, { status: 503 }) };
   }
