@@ -68,7 +68,7 @@ describe("customerWhatsappLink", () => {
 
 describe("shipmentLocale", () => {
   it("keeps supported locales", () => {
-    for (const locale of ["it", "fr", "es", "en", "nl"] as const) {
+    for (const locale of ["it", "fr", "es", "en", "nl", "de"] as const) {
       expect(shipmentLocale(locale)).toBe(locale);
     }
   });
@@ -76,7 +76,7 @@ describe("shipmentLocale", () => {
   it("falls back to Italian", () => {
     expect(shipmentLocale(null)).toBe("it");
     expect(shipmentLocale("")).toBe("it");
-    expect(shipmentLocale("de")).toBe("it");
+    expect(shipmentLocale("pt")).toBe("it");
     expect(shipmentLocale("IT")).toBe("it");
   });
 });

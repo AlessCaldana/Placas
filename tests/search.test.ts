@@ -15,6 +15,14 @@ describe("matchesMultilingualSearch", () => {
     expect(matchesMultilingualSearch("cocina", "Cucina")).toBe(true);
   });
 
+  it("finds categories with German terms", () => {
+    expect(matchesMultilingualSearch("motorrad", "Moto")).toBe(true);
+    expect(matchesMultilingualSearch("Motorräder", "Moto")).toBe(true);
+    expect(matchesMultilingualSearch("küche", "Cucina")).toBe(true);
+    expect(matchesMultilingualSearch("fußball", "Sport")).toBe(true);
+    expect(matchesMultilingualSearch("motorrad", "Cucina")).toBe(false);
+  });
+
   it("ignores accents and letter case", () => {
     expect(matchesMultilingualSearch("CAMION", "Camión")).toBe(true);
   });

@@ -58,7 +58,7 @@ function parseTranslationField(value: unknown, maxLength: number): string | null
 }
 
 /**
- * Parses the optional `translations` object (keys fr/es/en/nl, each
+ * Parses the optional `translations` object (keys fr/es/en/nl/de, each
  * `{ name?, description? }`). Unknown keys are ignored; wrong types or values
  * over the length limits make the whole product invalid.
  */

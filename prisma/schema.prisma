@@ -19,6 +19,7 @@ enum CatalogLocale {
   ES
   EN
   NL
+  DE
 }
 
 enum OrderStatus {

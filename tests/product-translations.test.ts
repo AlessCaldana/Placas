@@ -26,8 +26,9 @@ describe("parseProductTranslationsInput", () => {
         fr: { name: "  Plaque garage ", description: " Belle plaque " },
         en: { name: "Garage sign" },
         nl: {},
+        de: { name: " Blechschild Garage ", description: " Schönes Schild " },
         it: { name: "ignored" },
-        de: { name: "ignored" },
+        pt: { name: "ignored" },
       }),
     ).toEqual({
       ok: true,
@@ -35,6 +36,7 @@ describe("parseProductTranslationsInput", () => {
         fr: { name: "Plaque garage", description: "Belle plaque" },
         en: { name: "Garage sign", description: "" },
         nl: { name: "", description: "" },
+        de: { name: "Blechschild Garage", description: "Schönes Schild" },
       },
     });
   });
@@ -83,6 +85,7 @@ describe("localizeProductText", () => {
     { locale: "FR" as const, name: "Plaque garage", description: "Description française" },
     { locale: "EN" as const, name: "Garage sign", description: "   " },
     { locale: "ES" as const, name: " ", description: "Descripción" },
+    { locale: "DE" as const, name: "Blechschild Garage", description: "Schöne Beschreibung" },
   ];
 
   it("uses the Italian base fields for Italian", () => {
@@ -90,6 +93,10 @@ describe("localizeProductText", () => {
   });
 
   it("uses the translation when both fields are present", () => {
+    expect(localizeProductText(base, translations, "de")).toEqual({
+      name: "Blechschild Garage",
+      description: "Schöne Beschreibung",
+    });
     expect(localizeProductText(base, translations, "fr")).toEqual({
       name: "Plaque garage",
       description: "Description française",
@@ -126,10 +133,11 @@ describe("buildProductSearchText", () => {
         { locale: "FR", name: "Plaque garage", description: null },
         { locale: "EN", name: "Garage sign", description: null },
         { locale: "NL", name: "Targa garage", description: null },
+        { locale: "DE", name: "Blechschild Garage", description: null },
         { locale: "ES", name: " ", description: null },
         { locale: "IT", name: "Ignorato", description: null },
       ]),
-    ).toBe("Targa garage · Plaque garage · Garage sign · BMW · S1000RR");
+    ).toBe("Targa garage · Plaque garage · Garage sign · Blechschild Garage · BMW · S1000RR");
   });
 
   it("works without translations or brand", () => {

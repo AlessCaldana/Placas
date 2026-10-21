@@ -6,7 +6,7 @@ import type { Locale } from "@/messages";
  * it lives in the product's own `name`/`description` fields and is never
  * stored as a translation row.
  */
-export const productTranslationLocales = ["fr", "es", "en", "nl"] as const;
+export const productTranslationLocales = ["fr", "es", "en", "nl", "de"] as const;
 export type ProductTranslationLocale = (typeof productTranslationLocales)[number];
 
 export type ProductTranslationText = { name: string; description: string };
@@ -20,6 +20,7 @@ const catalogLocaleByLocale: Record<ProductTranslationLocale, CatalogLocale> = {
   es: "ES",
   en: "EN",
   nl: "NL",
+  de: "DE",
 };
 
 export function toCatalogLocale(locale: ProductTranslationLocale): CatalogLocale {
@@ -37,6 +38,7 @@ export function emptyProductTranslations(): ProductTranslations {
     es: { name: "", description: "" },
     en: { name: "", description: "" },
     nl: { name: "", description: "" },
+    de: { name: "", description: "" },
   };
 }
 

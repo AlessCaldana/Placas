@@ -10,6 +10,7 @@ export const languages: Record<Locale, { flag: string; name: string }> = {
   es: { flag: "🇪🇸", name: "Español" },
   en: { flag: "🇬🇧", name: "English" },
   nl: { flag: "🇳🇱", name: "Nederlands" },
+  de: { flag: "🇩🇪", name: "Deutsch" },
 };
 
 export function LocaleSwitcher() {

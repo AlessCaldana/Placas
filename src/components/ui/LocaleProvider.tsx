@@ -17,6 +17,7 @@ const languageNames: Record<Locale, string> = {
   es: "Español",
   en: "English",
   nl: "Nederlands",
+  de: "Deutsch",
 };
 const languageFlags: Record<Locale, string> = {
   it: "🇮🇹",
@@ -24,6 +25,7 @@ const languageFlags: Record<Locale, string> = {
   es: "🇪🇸",
   en: "🇬🇧",
   nl: "🇳🇱",
+  de: "🇩🇪",
 };
 
 export function LocaleProvider({
