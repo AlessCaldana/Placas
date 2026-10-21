@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
-    "build:hostinger": "prisma generate && prisma migrate deploy && next build",
+    "build:hostinger": "prisma generate && prisma migrate deploy && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
