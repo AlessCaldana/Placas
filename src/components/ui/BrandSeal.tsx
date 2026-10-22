@@ -5,7 +5,7 @@ import { useId } from "react";
 // `full` carries the name around the ring; `compact` is for small sizes
 // (header, admin, icons) where the ring text would not be readable.
 const DISPLAY_FONT = "Shrikhand, 'Cooper Black', Georgia, serif";
-const SUNSET = ["#e0a526", "#e8833a", "#b8432a", "#7a2230"];
+const SUNSET = ["#e0a526", "#e8833a", "#a5523e", "#7a2230"];
 
 export function BrandSeal({
   size = 40,

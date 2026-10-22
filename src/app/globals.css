@@ -21,9 +21,9 @@
    * Paleta anni '70 de la web pública. --r70-red-text es el rojo para texto pequeño
    * sobre crema (5,4:1); el resto se usa en fondos, bordes y decoración.
    */
-  --r70-red: #b8432a;
-  --r70-red-dark: #9a3329;
-  --r70-red-text: #a63a24;
+  --r70-red: #a5523e;
+  --r70-red-dark: #8f4334;
+  --r70-red-text: #9a4a36;
   --r70-wine: #7a2230;
   --r70-orange: #e8833a;
   --r70-mustard: #e0a526;
@@ -425,7 +425,7 @@ footer .footer-main .brand small {
 }
 /* Rojo vintage: ladrillo arriba a la derecha, burdeos abajo a la izquierda (detrás del texto). */
 .hero {
-  --hero-brick: #b8432a;
+  --hero-brick: #a5523e;
   --hero-wine: #7a2230;
   --hero-mustard: #e0a526;
   --hero-brown: #5a3220;
@@ -441,7 +441,7 @@ footer .footer-main .brand small {
   isolation: isolate;
   background:
     radial-gradient(70% 60% at 0% 100%, #5e1a26cc 0, transparent 70%),
-    linear-gradient(215deg, var(--hero-brick) 0%, #9a3329 48%, var(--hero-wine) 100%);
+    linear-gradient(215deg, var(--hero-brick) 0%, #8f4334 48%, var(--hero-wine) 100%);
 }
 .hero:after {
   content: "";
@@ -902,8 +902,8 @@ html:has(.maintenance-admin-bar) .products-heading {
  * marrón oscuro. --b solo cierra el degradado de los bloques sin foto.
  */
 .tone-0 {
-  --a: #b8432a;
-  --b: #8e2f2b;
+  --a: #a5523e;
+  --b: #844033;
   --fg: #fff6e8;
 }
 .tone-1 {
@@ -2120,7 +2120,7 @@ footer :focus-visible {
   .product-dialog-buy-price {
     display: block;
     margin: 0;
-    color: #a63a24;
+    color: #9a4a36;
     font-size: 20px;
     font-weight: 700;
     white-space: nowrap;
@@ -3399,7 +3399,7 @@ footer :focus-visible {
 /*
  * Página que ven los visitantes con el modo activo: el rojo del hero con las rayas 70
  * (HeroStripes) abajo a la derecha, el sello grande y los contactos.
- * Texto crema sobre #b8432a–#7a2230: ≥ 5,4:1.
+ * Texto crema sobre #a5523e–#7a2230: ≥ 5,4:1.
  */
 .maintenance-page {
   --stripe-scale: 1;

@@ -110,7 +110,7 @@ export function ProductDetailsDialog({
       display: "grid",
       placeItems: "center",
       overflow: "hidden",
-      background: product.imageUrl ? "#ebe0c9" : "linear-gradient(135deg, #b8432a, #7a2230)",
+      background: product.imageUrl ? "#ebe0c9" : "linear-gradient(135deg, #a5523e, #7a2230)",
     },
     photo: {
       display: "block",
@@ -235,7 +235,7 @@ export function ProductDetailsDialog({
         <div className="product-dialog-copy" style={styles.copy}>
           <small style={{ color: "var(--muted)", fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase" }}>{product.path}</small>
           <h2 id="product-dialog-title" style={{ margin: "10px 0 12px", font: "400 clamp(26px, 3vw, 36px)/1.15 var(--ff-display)", fontSynthesis: "none", letterSpacing: 0, color: "#3d2216", overflowWrap: "break-word" }}>{product.name}</h2>
-          <p className="product-dialog-price" style={{ margin: "0 0 28px", color: "#a63a24", fontSize: 20, fontWeight: 700 }}>{product.price}</p>
+          <p className="product-dialog-price" style={{ margin: "0 0 28px", color: "#9a4a36", fontSize: 20, fontWeight: 700 }}>{product.price}</p>
           <h3 style={{ margin: "22px 0 8px", fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase" }}>{t("product.description")}</h3>
           <p className="product-dialog-description" style={{ margin: 0, color: "var(--muted)", fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-line" }}>{product.description.trim() || t("product.noDescription")}</p>
           <h3 style={{ margin: "22px 0 8px", fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase" }}>{t("product.information")}</h3>
@@ -248,7 +248,7 @@ export function ProductDetailsDialog({
             {/* On phones this bar (price + add) stays fixed at the bottom of the dialog; on wider screens it is a plain row. */}
             <div className="product-dialog-buy">
               <p className="product-dialog-buy-price">{product.price}</p>
-              <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 20px", border: 0, borderRadius: 10, background: addDisabled ? "#8a8577" : "#b8432a", boxShadow: addDisabled ? "none" : "3px 3px 0 #5a3220", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
+              <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 20px", border: 0, borderRadius: 10, background: addDisabled ? "#8a8577" : "#a5523e", boxShadow: addDisabled ? "none" : "3px 3px 0 #5a3220", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
             </div>
             {whatsappHref && (
               <a className="product-dialog-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 18px", border: "2px solid #5a3220", borderRadius: 10, color: "#3d2216", font: "600 13px 'DM Sans Variable', sans-serif", textDecoration: "none" }}>

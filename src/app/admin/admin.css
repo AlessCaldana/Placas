@@ -7,13 +7,13 @@
  *   éxito  → verde oliva 70  (--a70-ok, texto #4b5619)
  *   aviso  → mostaza         (--a70-warn-text #6e4c0c)
  *   error  → rojo            (--a70-error #8c1d16)
- *   enlaces → rojo texto     (--a70-red-text #a63a24)
+ *   enlaces → rojo texto     (--a70-red-text #9a4a36)
  */
 .admin-shell {
   --a70-brown-dark: #3d2216;
   --a70-brown: #5a3220;
-  --a70-red: #b8432a;
-  --a70-red-text: #a63a24;
+  --a70-red: #a5523e;
+  --a70-red-text: #9a4a36;
   --a70-wine: #7a2230;
   --a70-orange: #e8833a;
   --a70-mustard: #e0a526;
@@ -46,7 +46,7 @@
   --soft: #f1e6cf;
   --gold: #e0a526;
   --gold-2: #f5bd45;
-  --green: #a63a24;
+  --green: #9a4a36;
   --white: #fffdf7;
   --paper: #f3ead7;
   min-height: 100vh;
@@ -321,7 +321,7 @@
   transform: none;
 }
 .btn-danger {
-  background-color: var(--a70-red-text, #a63a24);
+  background-color: var(--a70-red-text, #9a4a36);
   color: #fff;
 }
 

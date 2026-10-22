@@ -109,7 +109,7 @@ export default function LoginPage() {
               transparent 0 calc(50% - 16px),
               #e8833a calc(50% - 16px) calc(50% - 4px),
               transparent 0 calc(50% + 2px),
-              #b8432a calc(50% + 2px) calc(50% + 14px),
+              #a5523e calc(50% + 2px) calc(50% + 14px),
               transparent 0 calc(50% + 20px),
               #7a2230 calc(50% + 20px) calc(50% + 32px),
               transparent 0
@@ -138,7 +138,7 @@ export default function LoginPage() {
           margin-bottom: 4px;
         }
         .login-eyebrow {
-          color: #a63a24;
+          color: #9a4a36;
           font-size: 12px;
           font-weight: 700;
           letter-spacing: 0.16em;
@@ -176,7 +176,7 @@ export default function LoginPage() {
           font-size: 16px;
         }
         .login-card :focus-visible {
-          outline: 2px solid #b8432a;
+          outline: 2px solid #a5523e;
           outline-offset: 2px;
         }
         input:focus-visible {

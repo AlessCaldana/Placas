@@ -6,7 +6,7 @@
     <rect width="64" height="64" fill="#f3ead7"/>
     <rect y="36" width="64" height="3.6" fill="#e0a526"/>
     <rect y="41" width="64" height="3.6" fill="#e8833a"/>
-    <rect y="46" width="64" height="3.6" fill="#b8432a"/>
+    <rect y="46" width="64" height="3.6" fill="#a5523e"/>
     <rect y="51" width="64" height="13" fill="#7a2230"/>
   </g>
   <text x="32" y="34" text-anchor="middle" font-family="'Cooper Black', Georgia, serif" font-weight="700" font-size="19" fill="#3d2216">PF</text>
