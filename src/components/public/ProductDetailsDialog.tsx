@@ -244,8 +244,12 @@ export function ProductDetailsDialog({
               <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 18, padding: "10px 0", borderBottom: "1px solid var(--line)", fontSize: 13 }}><dt style={{ color: "var(--muted)" }}>{label}</dt><dd style={{ margin: 0, textAlign: "right" }}>{value}</dd></div>
             ))}
           </dl>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 24 }}>
-            <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 20px", border: 0, borderRadius: 10, background: addDisabled ? "#8a8577" : "#b8432a", boxShadow: addDisabled ? "none" : "3px 3px 0 #5a3220", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
+          <div className="product-dialog-actions" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 24 }}>
+            {/* On phones this bar (price + add) stays fixed at the bottom of the dialog; on wider screens it is a plain row. */}
+            <div className="product-dialog-buy">
+              <p className="product-dialog-buy-price">{product.price}</p>
+              <button className="product-dialog-contact" type="button" onClick={addProductToCart} disabled={addDisabled} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 48, padding: "0 20px", border: 0, borderRadius: 10, background: addDisabled ? "#8a8577" : "#b8432a", boxShadow: addDisabled ? "none" : "3px 3px 0 #5a3220", color: "white", font: "600 13px 'DM Sans Variable', sans-serif", cursor: addDisabled ? "not-allowed" : "pointer", opacity: addDisabled ? 0.75 : 1 }}>{addLabel}</button>
+            </div>
             {whatsappHref && (
               <a className="product-dialog-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 18px", border: "2px solid #5a3220", borderRadius: 10, color: "#3d2216", font: "600 13px 'DM Sans Variable', sans-serif", textDecoration: "none" }}>
                 <Icon name="chat" size={17} />

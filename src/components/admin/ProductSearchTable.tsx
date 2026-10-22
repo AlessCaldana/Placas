@@ -30,9 +30,9 @@ export function ProductSearchTable({ products }: { products: AdminProduct[] }) {
           aria-label={t("admin.products.search")}
         />
       </label>
-      <section className="admin-card table-card">
+      <section className="admin-card table-card product-table-card">
         <div className="table-scroll admin-scroll-box">
-          <table>
+          <table className="product-table">
             <thead>
               <tr>
                 <th>{t("admin.products.name")}</th>
@@ -50,7 +50,7 @@ export function ProductSearchTable({ products }: { products: AdminProduct[] }) {
                 const categoryKey = categoryMessageKey(product.category);
                 return (
                   <tr key={product.reference}>
-                    <td>
+                    <td className="product-cell-name">
                       <div className="product-name-cell">
                         {product.imageUrl ? (
                           <Image
@@ -71,19 +71,20 @@ export function ProductSearchTable({ products }: { products: AdminProduct[] }) {
                         <b>{product.name}</b>
                       </div>
                     </td>
-                    <td>
+                    {/* data-label: column name shown on each field when the table becomes cards (narrow screens). */}
+                    <td data-label={t("admin.products.reference")}>
                       <code>{product.reference}</code>
                     </td>
-                    <td>{categoryKey ? t(categoryKey) : product.category}</td>
-                    <td>{product.size || "—"}</td>
-                    <td>
+                    <td data-label={t("admin.products.category")}>{categoryKey ? t(categoryKey) : product.category}</td>
+                    <td data-label={t("admin.products.size")}>{product.size || "—"}</td>
+                    <td data-label={t("admin.products.price")}>
                       <b>{product.price > 0 ? currency.format(product.price) : "—"}</b>
                     </td>
-                    <td>{product.qty ?? "—"}</td>
-                    <td>
+                    <td data-label={t("admin.products.quantity")}>{product.qty ?? "—"}</td>
+                    <td data-label={t("admin.products.state")}>
                       <StatusBadge state={product.state} />
                     </td>
-                    <td>
+                    <td className="product-cell-actions">
                       <Link
                         className="row-link"
                         href={`/admin/prodotti/${encodeURIComponent(product.reference)}/modifica`}

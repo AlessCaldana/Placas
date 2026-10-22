@@ -8,16 +8,22 @@ export function SearchBar({
   locale,
   value,
   onChange,
+  onSubmit,
 }: {
   locale: Locale;
   value: string;
   onChange: (value: string) => void;
+  /** Runs when the visitor presses Enter or the search button. */
+  onSubmit?: () => void;
 }) {
   return (
     <form
       className="search-bar"
       role="search"
-      onSubmit={(event) => event.preventDefault()}
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit?.();
+      }}
     >
       <Icon name="search" />
       <input

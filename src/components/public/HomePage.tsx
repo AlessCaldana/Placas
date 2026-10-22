@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
@@ -47,6 +47,16 @@ export function HomePage({
   const [selectedProduct, setSelectedProduct] = useState<PublicCatalogProduct | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  // Each request takes the visitor to the results once React has rendered the new list.
+  const [resultsRequest, setResultsRequest] = useState(0);
+  const resultsHeadingRef = useRef<HTMLDivElement>(null);
+  const resultsTitleRef = useRef<HTMLHeadingElement>(null);
+  const showResults = () => setResultsRequest((current) => current + 1);
+  useEffect(() => {
+    if (resultsRequest && resultsHeadingRef.current) {
+      revealResults(resultsHeadingRef.current, resultsTitleRef.current);
+    }
+  }, [resultsRequest]);
   const t = (key: string) => translate(locale, key);
   const matchingCategories = categories.filter((category) =>
     matchesMultilingualSearch(query, category.name),
@@ -106,7 +116,7 @@ export function HomePage({
   const openHeroProduct = (heroProduct: HeroProduct) => {
     const product = products.find((item) => item.id === heroProduct.id);
     if (product) setSelectedProduct(product);
-    else document.getElementById("prodotti")?.scrollIntoView({ behavior: "smooth" });
+    else document.getElementById("prodotti")?.scrollIntoView({ behavior: scrollBehavior() });
   };
   const changeCartQuantity = (productId: string, change: number) => {
     setCartItems((current) => current.flatMap((item) => {
@@ -143,7 +153,14 @@ export function HomePage({
       </section>
 
       <section className="search-section">
-        <SearchBar locale={locale} value={query} onChange={setQuery} />
+        <SearchBar
+          locale={locale}
+          value={query}
+          onChange={setQuery}
+          onSubmit={() => {
+            if (query.trim() && visibleProducts.length) showResults();
+          }}
+        />
         {query.trim() && visibleCategories.length + visibleProducts.length === 0 && (
           <p className="search-empty" role="status">{t("search.empty")}</p>
         )}
@@ -173,9 +190,8 @@ export function HomePage({
                   } else {
                     setExpandedCategory(category.id);
                     setSelectedCategory(category.id);
-                    if (!categories.some((item) => item.parentId === category.id)) {
-                      document.getElementById("prodotti")?.scrollIntoView({ behavior: "smooth" });
-                    }
+                    // The plates are listed below every category card: go to them.
+                    showResults();
                   }
                 }}
               >
@@ -198,7 +214,7 @@ export function HomePage({
                     aria-pressed={selectedCategory === subcategory.id}
                     onClick={() => {
                       setSelectedCategory((current) => current === subcategory.id ? expandedCategory : subcategory.id);
-                      document.getElementById("prodotti")?.scrollIntoView({ behavior: "smooth" });
+                      showResults();
                     }}
                   >
                     <CategoryPhoto imageUrl={categoryCover(subcategory.id)} initial={label.charAt(0)} />
@@ -214,9 +230,10 @@ export function HomePage({
       <div className="retro-divider" aria-hidden="true" />
 
       <section className="section featured" id="prodotti">
-        <div className="section-heading"><div>
+        <div className="section-heading products-heading" ref={resultsHeadingRef}><div>
           <div className="eyebrow"><span /> {t(showFeatured ? "featured.eyebrow" : "featured.catalogEyebrow")}</div>
-          <h2>{productsTitle}</h2>
+          {/* Focusable from script only: after choosing a category, screen readers read the results title. */}
+          <h2 className="products-title" ref={resultsTitleRef} tabIndex={-1}>{productsTitle}</h2>
         </div></div>
         <div className="products-grid">
           {visibleProducts.map((product) => <ProductCard key={product.id} product={product} locale={locale} onSelect={() => setSelectedProduct(product)} />)}
@@ -228,7 +245,7 @@ export function HomePage({
               className="btn btn-dark products-more-button"
               onClick={() => {
                 setShowAllProducts((current) => !current);
-                if (showAllProducts) document.getElementById("prodotti")?.scrollIntoView({ behavior: "smooth" });
+                if (showAllProducts) document.getElementById("prodotti")?.scrollIntoView({ behavior: scrollBehavior() });
               }}
             >
               {showAllProducts
@@ -288,6 +305,23 @@ export function HomePage({
       </section>
     </>
   );
+}
+
+/** Smooth scrolling, unless the visitor asked the system for reduced motion. */
+function scrollBehavior(): ScrollBehavior {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
+}
+
+/**
+ * Brings the results heading into view, only if it is not already in the upper part of
+ * the screen (so the first plates are visible too), and moves focus to its title.
+ */
+function revealResults(heading: HTMLElement, title: HTMLElement | null) {
+  const { top, bottom } = heading.getBoundingClientRect();
+  if (top < 0 || bottom > window.innerHeight * 0.6) {
+    heading.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+  }
+  title?.focus({ preventScroll: true });
 }
 
 /** Top of a category card: a real plate of the category, or a colour block with its initial. */
