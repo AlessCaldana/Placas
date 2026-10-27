@@ -2,7 +2,7 @@
 // build their public tracking link from the code; "other" uses the https link
 // typed by PFdeco.
 
-export type CarrierId = "poste" | "brt" | "gls" | "sda" | "dhl" | "ups" | "fedex" | "other";
+export type CarrierId = "bpost" | "mondial_relay" | "dpd" | "gls" | "fedex" | "ups" | "dhl" | "other";
 
 export type Carrier = {
   id: CarrierId;
@@ -17,35 +17,34 @@ const code = (value: string) => encodeURIComponent(value);
 
 export const CARRIERS: readonly Carrier[] = [
   {
-    id: "poste",
-    name: "Poste Italiane",
-    // URL verificada el 2026-10-12
-    trackingUrl: (value) => `https://www.poste.it/cerca/index.html#/risultati-spedizioni/${code(value)}`,
+    id: "bpost",
+    name: "bpost",
+    // URL verificada el 2026-10-27; con el código postal se ven todos los detalles
+    trackingUrl: (value) => `https://track.bpost.cloud/btr/web/#/search?itemCode=${code(value)}&lang=en`,
   },
   {
-    id: "brt",
-    name: "BRT",
-    // URL verificada el 2026-10-12
-    trackingUrl: (value) => `https://services.brt.it/it/tracking?trackingNumber=${code(value)}`,
+    id: "mondial_relay",
+    name: "Mondial Relay",
+    // URL verificada el 2026-10-27; rellena el número y el cliente añade su código postal
+    trackingUrl: (value) => `https://www.mondialrelay.be/fr-be/suivi-de-colis/?numeroExpedition=${code(value)}`,
+  },
+  {
+    id: "dpd",
+    name: "DPD",
+    // URL documentada por DPD Belgium (it-integration.dpd.be) el 2026-10-27
+    trackingUrl: (value) => `https://www.dpdgroup.com/be/mydpd/my-parcels/search?lang=en&parcelNumber=${code(value)}`,
   },
   {
     id: "gls",
-    name: "GLS Italy",
-    // URL verificada el 2026-10-12
-    trackingUrl: (value) => `https://gls-group.com/IT/it/servizi-online/ricerca-spedizioni/?match=${code(value)}`,
+    name: "GLS",
+    // URL verificada el 2026-10-27
+    trackingUrl: (value) => `https://gls-group.eu/BE/en/track-trace/?match=${code(value)}`,
   },
   {
-    id: "sda",
-    name: "SDA",
+    id: "fedex",
+    name: "FedEx",
     // URL verificada el 2026-10-12
-    trackingUrl: (value) =>
-      `https://www.poste.it/cerca/index.html#/risultati-spedizioni/${code(value)}`,
-  },
-  {
-    id: "dhl",
-    name: "DHL",
-    // URL verificada el 2026-10-12
-    trackingUrl: (value) => `https://www.dhl.com/it-it/home/tracciabilita.html?tracking-id=${code(value)}`,
+    trackingUrl: (value) => `https://www.fedex.com/fedextrack/?trknbr=${code(value)}`,
   },
   {
     id: "ups",
@@ -54,10 +53,10 @@ export const CARRIERS: readonly Carrier[] = [
     trackingUrl: (value) => `https://www.ups.com/track?loc=it_IT&tracknum=${code(value)}`,
   },
   {
-    id: "fedex",
-    name: "FedEx/TNT",
-    // URL verificada el 2026-10-12
-    trackingUrl: (value) => `https://www.fedex.com/fedextrack/?trknbr=${code(value)}`,
+    id: "dhl",
+    name: "DHL Express",
+    // URL verificada el 2026-10-27
+    trackingUrl: (value) => `https://www.dhl.com/be-en/home/tracking.html?submit=1&tracking-id=${code(value)}`,
   },
   {
     id: "other",

@@ -192,7 +192,7 @@ export function privacyPolicy(ctx: LegalContext): LegalSection[] {
           ],
           [
             strong("corrieri"),
-            ", per consegnare il pacco (a seconda della spedizione, ad esempio Poste Italiane, BRT, GLS, SDA, DHL, UPS, FedEx o altri corrieri), che ricevono nome, indirizzo e, se necessario, telefono ed email;",
+            ", per consegnare il pacco (a seconda della spedizione, ad esempio bpost, Mondial Relay, DPD, GLS, FedEx, UPS, DHL Express o altri corrieri), che ricevono nome, indirizzo e, se necessario, telefono ed email;",
           ],
           [
             strong("fornitori di hosting e di servizi informatici"),
@@ -594,7 +594,7 @@ export function shippingAndReturns(ctx: LegalContext): LegalSection[] {
           "Di solito prepariamo e affidiamo il pacco al corriere entro 2–5 giorni lavorativi dal pagamento. È un'indicazione orientativa: nei periodi di maggiore richiesta può servire qualche giorno in più.",
         ),
         p(
-          "A questo si aggiungono i tempi del corriere, che dipendono dalla destinazione. A seconda della spedizione ci affidiamo, ad esempio, a Poste Italiane, BRT, GLS, SDA, DHL, UPS, FedEx o ad altri corrieri. Salvo diverso accordo, la consegna avviene comunque entro 30 giorni dalla conclusione del contratto (art. 18 della Direttiva 2011/83/UE).",
+          "A questo si aggiungono i tempi del corriere, che dipendono dalla destinazione. A seconda della spedizione ci affidiamo, ad esempio, a bpost, Mondial Relay, DPD, GLS, FedEx, UPS, DHL Express o ad altri corrieri. Salvo diverso accordo, la consegna avviene comunque entro 30 giorni dalla conclusione del contratto (art. 18 della Direttiva 2011/83/UE).",
         ),
       ],
     },

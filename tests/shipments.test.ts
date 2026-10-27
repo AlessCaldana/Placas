@@ -12,16 +12,16 @@ describe("parseShipmentInput", () => {
   it("accepts a known carrier and ignores trackingUrl and unknown fields", () => {
     expect(
       parseShipmentInput({
-        carrier: "brt",
+        carrier: "dpd",
         trackingNumber: "ABC123456",
         trackingUrl: "https://evil.example/x",
         shippedAt: "2020-01-01",
       }),
-    ).toEqual({ carrier: "brt", trackingNumber: "ABC123456", trackingUrl: null });
+    ).toEqual({ carrier: "dpd", trackingNumber: "ABC123456", trackingUrl: null });
   });
 
   it("trims and collapses spaces in the tracking number", () => {
-    expect(parseShipmentInput({ carrier: "poste", trackingNumber: "  RR 123   456 IT " })?.trackingNumber).toBe(
+    expect(parseShipmentInput({ carrier: "bpost", trackingNumber: "  RR 123   456 IT " })?.trackingNumber).toBe(
       "RR 123 456 IT",
     );
   });
@@ -44,10 +44,10 @@ describe("parseShipmentInput", () => {
 
   it("rejects unknown carriers and non-object bodies", () => {
     expect(parseShipmentInput({ carrier: "pony", trackingNumber: "ABC123" })).toBeNull();
-    expect(parseShipmentInput({ carrier: "BRT", trackingNumber: "ABC123" })).toBeNull();
+    expect(parseShipmentInput({ carrier: "DPD", trackingNumber: "ABC123" })).toBeNull();
     expect(parseShipmentInput(null)).toBeNull();
-    expect(parseShipmentInput("brt")).toBeNull();
-    expect(parseShipmentInput([{ carrier: "brt", trackingNumber: "ABC123" }])).toBeNull();
+    expect(parseShipmentInput("dpd")).toBeNull();
+    expect(parseShipmentInput([{ carrier: "dpd", trackingNumber: "ABC123" }])).toBeNull();
   });
 
   it("requires a valid https link for the other carrier", () => {
@@ -103,7 +103,9 @@ describe("buildTrackingUrl", () => {
   });
 
   it("exposes readable carrier names", () => {
-    expect(findCarrier("poste")?.name).toBe("Poste Italiane");
+    expect(findCarrier("mondial_relay")?.name).toBe("Mondial Relay");
+    expect(findCarrier("dhl")?.name).toBe("DHL Express");
+    expect(findCarrier("poste")).toBeNull();
     expect(findCarrier("other")?.name).toBe("Altro");
     expect(findCarrier("nope")).toBeNull();
   });
