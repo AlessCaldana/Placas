@@ -327,11 +327,23 @@ export function HomePage({
 
       <ReviewsSection reviews={reviews} locale={locale} />
 
+      <div className="retro-divider is-bold" aria-hidden="true" />
+
       <section className="cta" id="contatti">
-        <div><div className="eyebrow light"><span /> {t("contact.eyebrow")}</div>
-          <h2>{t("contact.title1")}<br />{t("contact.title2")}</h2></div>
-        <div><p>{t("contact.text")}</p>
-          <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="gold" icon="chat">{t("cta.whatsapp")}</ButtonLink></div>
+        {/* Canyon sunset behind the block (decorative): the page starts on the road and
+            ends at sunset. Far below the fold, so it is only fetched when it gets close. */}
+        <picture className="cta-photo">
+          <source type="image/webp" srcSet="/brand/cta-canyon.webp" />
+          <img src="/brand/cta-canyon.jpg" alt="" width={1024} height={572} loading="lazy" decoding="async" />
+        </picture>
+        <div className="cta-copy">
+          <div className="eyebrow light"><span /> {t("contact.eyebrow")}</div>
+          <h2>{t("contact.title1")}<br />{t("contact.title2")}</h2>
+          <p className="hero-subtitle cta-subtitle">{t("contact.subtitle")}</p>
+          <p className="cta-text">{t("contact.text")}</p>
+          <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="gold" icon="chat">{t("cta.whatsapp")}</ButtonLink>
+        </div>
+        <CtaPlates photos={ctaPlatePhotos(heroProducts, products)} />
       </section>
     </>
   );
@@ -352,6 +364,44 @@ function revealResults(heading: HTMLElement, title: HTMLElement | null) {
     heading.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
   }
   title?.focus({ preventScroll: true });
+}
+
+type PlatePhoto = { id: string; imageUrl: string };
+
+/**
+ * Up to three real plates for the contact block, from the data the page already has: the
+ * hero plates first (skipping the one in front of the carousel when there are enough),
+ * then any available plate with a photo.
+ */
+function ctaPlatePhotos(heroProducts: HeroProduct[], products: PublicCatalogProduct[]): PlatePhoto[] {
+  const candidates: { id: string; imageUrl: string | null }[] = [
+    ...heroProducts.slice(1),
+    ...heroProducts.slice(0, 1),
+    ...products.filter((product) => product.available),
+  ];
+  const photos: PlatePhoto[] = [];
+  for (const { id, imageUrl } of candidates) {
+    if (photos.length === 3) break;
+    if (imageUrl && !photos.some((photo) => photo.id === id)) photos.push({ id, imageUrl });
+  }
+  return photos;
+}
+
+/**
+ * Fan of tilted plates next to the WhatsApp button, like the hero pile. Purely decorative:
+ * hidden from assistive technology, not clickable, photos loaded only when close.
+ */
+function CtaPlates({ photos }: { photos: PlatePhoto[] }) {
+  if (!photos.length) return null;
+  return (
+    <div className={`cta-plates has-${photos.length}`} aria-hidden="true">
+      {photos.map((photo, index) => (
+        <picture className={`cta-plate is-${index}`} key={photo.id}>
+          <img src={photo.imageUrl} alt="" loading="lazy" decoding="async" draggable={false} />
+        </picture>
+      ))}
+    </div>
+  );
 }
 
 /** Top of a category card: a real plate of the category, or a colour block with its initial. */

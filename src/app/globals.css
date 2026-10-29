@@ -41,6 +41,21 @@
     transparent 8px 10px,
     var(--r70-red) 10px 13px
   );
+  /*
+   * Rayas 70 marcadas (mostaza, naranja, terracota y marrón, como las del hero) para el
+   * separador de encima del bloque "Parliamone" y el borde superior del footer.
+   */
+  --r70-stripes-bold-height: 29px;
+  --r70-stripes-bold: linear-gradient(
+    to bottom,
+    var(--r70-mustard) 0 5px,
+    transparent 5px 8px,
+    var(--r70-orange) 8px 13px,
+    transparent 13px 16px,
+    var(--r70-red) 16px 21px,
+    transparent 21px 24px,
+    var(--r70-brown) 24px 29px
+  );
 }
 
 @theme inline {
@@ -1228,6 +1243,12 @@ html:has(.maintenance-admin-bar) .products-heading {
   margin: 0 auto;
   background: var(--r70-stripes);
 }
+/* Versión marcada, a todo el ancho: encima del bloque "Parliamone". */
+.retro-divider.is-bold {
+  width: 100%;
+  height: var(--r70-stripes-bold-height);
+  background: var(--r70-stripes-bold);
+}
 .section-heading p {
   color: var(--muted);
   margin: 0;
@@ -2020,8 +2041,11 @@ html:has(.maintenance-admin-bar) .products-heading {
   margin: 0;
 }
 /*
- * Franja "Parliamone": el rojo del hero, rayas 70 finas arriba (como las del header) y
- * arcos "sunset" (crema, mostaza, naranja, marrón) en la esquina inferior derecha.
+ * Bloque "Parliamone": atardecer en el cañón de fondo (la web empieza en la carretera y
+ * termina al atardecer) bajo un velo marrón cálido como el del hero, los arcos "sunset"
+ * (crema, mostaza, naranja, marrón) en la esquina inferior derecha y, junto al botón,
+ * un abanico de placas reales inclinadas. Medido sobre la foto: texto crema 6,7:1 o
+ * más y subtítulo petróleo claro 5,6:1 o más, en escritorio y en móvil.
  */
 .cta {
   --cta-ring: 18px;
@@ -2031,21 +2055,49 @@ html:has(.maintenance-admin-bar) .products-heading {
   isolation: isolate;
   overflow: hidden;
   color: var(--white);
-  padding: 96px max(7vw, calc((100vw - 1220px) / 2)) 85px;
+  padding: 96px max(7vw, calc((100vw - 1220px) / 2)) 92px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 100px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 64px;
   align-items: center;
+  /* Mientras llega la foto (o si falla): el marrón del velo. */
+  background: #200f09;
+}
+.cta-photo,
+.cta:before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cta-photo {
+  z-index: -3;
+}
+.cta-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+/* Denso detrás del texto (izquierda), ligero detrás de las placas: se ve el atardecer. */
+.cta:before {
+  content: "";
+  z-index: -2;
   background:
     linear-gradient(
-      to bottom,
-      var(--r70-mustard) 0 4px,
-      transparent 4px 7px,
-      var(--r70-orange) 7px 11px,
-      transparent 11px
+      to right,
+      rgb(32 15 9 / 0.84) 0%,
+      rgb(32 15 9 / 0.8) 44%,
+      rgb(32 15 9 / 0.48) 62%,
+      rgb(32 15 9 / 0.2) 82%,
+      rgb(32 15 9 / 0.32) 100%
     ),
-    radial-gradient(70% 70% at 0% 100%, #5e1a26aa 0, transparent 70%),
-    linear-gradient(215deg, var(--r70-red) 0%, var(--r70-red-dark) 48%, var(--r70-wine) 100%);
+    linear-gradient(
+      to bottom,
+      rgb(32 15 9 / 0.35),
+      transparent 30% 70%,
+      rgb(32 15 9 / 0.6)
+    );
 }
 .cta:after {
   content: "";
@@ -2066,6 +2118,10 @@ html:has(.maintenance-admin-bar) .products-heading {
     transparent 0
   );
 }
+.cta-copy {
+  min-width: 0;
+}
+/* Mismo crema y sombra marrón que el título del hero. */
 .cta h2 {
   font-family: var(--ff-display);
   font-synthesis: none;
@@ -2074,13 +2130,18 @@ html:has(.maintenance-admin-bar) .products-heading {
   line-height: 1.1;
   letter-spacing: 0;
   overflow-wrap: break-word;
-  text-shadow: 0.05em 0.05em 0 var(--r70-brown);
+  color: #fff3e0;
+  text-shadow: 0.05em 0.05em 0 #2a120b;
   margin: 0;
 }
 .cta .eyebrow.light {
   color: #fff6e8;
 }
-.cta p {
+/* Subtítulo manuscrito: misma clase que el del hero (.hero-subtitle), otro margen. */
+.cta .cta-subtitle {
+  margin: 16px 0 14px;
+}
+.cta-text {
   color: #fff6e8;
   line-height: 1.8;
   max-width: 500px;
@@ -2089,20 +2150,81 @@ html:has(.maintenance-admin-bar) .products-heading {
 .cta :focus-visible {
   outline-color: var(--gold-2);
 }
+/*
+ * Abanico de placas (decorativo) como la pila del carrusel del hero: la central delante,
+ * las de los lados giradas y algo más oscuras. Cada foto conserva su forma dentro de una
+ * caja máxima (--cta-plate de ancho de referencia).
+ */
+.cta-plates {
+  --cta-plate: clamp(110px, 11vw, 180px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(var(--cta-plate) * 1.5 + 48px);
+  min-width: 0;
+  pointer-events: none;
+  user-select: none;
+}
+.cta-plate {
+  position: relative;
+  flex: none;
+  display: block;
+  margin-left: calc(var(--cta-plate) * -0.32);
+}
+.cta-plate:first-child {
+  margin-left: 0;
+}
+.cta-plate img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: calc(var(--cta-plate) * 1.15);
+  max-height: calc(var(--cta-plate) * 1.5);
+  border-radius: 8px;
+  background: #3a1016;
+  box-shadow:
+    0 1px 0 #ffffff26 inset,
+    0 2px 4px #2b0a1040,
+    0 18px 30px #2b0a1059,
+    0 34px 60px #2b0a1066;
+}
+.cta-plate.is-0 {
+  z-index: 1;
+  transform: translateY(12px) rotate(-8deg);
+}
+.cta-plate.is-1 {
+  z-index: 3;
+  transform: translateY(-10px) rotate(-2deg);
+}
+.cta-plate.is-2 {
+  z-index: 2;
+  transform: translateY(16px) rotate(7deg);
+}
+/* Con tres, la del centro va delante: las de los lados, en penumbra. */
+.cta-plates.has-3 .cta-plate:not(.is-1) img {
+  filter: brightness(0.8) saturate(0.9);
+}
+.cta-plates.has-2 .cta-plate.is-0 img {
+  filter: brightness(0.8) saturate(0.9);
+}
+.cta-plates.has-1 .cta-plate.is-0 {
+  transform: rotate(-3deg);
+}
 
 /* ---------- Footer ---------- */
-/* Marrón del header con la doble raya 70 (naranja y mostaza) encima. */
+/*
+ * Marrón del header con las rayas 70 marcadas encima (mostaza, naranja, terracota y
+ * marrón sobre crema, como el separador de encima del bloque "Parliamone"): en todas las
+ * páginas públicas la página termina igual y la última raya se funde con el footer.
+ */
 footer {
   --footer-brown: #3d2216;
-  background: linear-gradient(
-    to bottom,
-    var(--r70-orange) 0 4px,
-    var(--footer-brown) 4px 7px,
-    var(--r70-mustard) 7px 11px,
-    var(--footer-brown) 11px
-  );
+  background:
+    var(--r70-stripes-bold) top / 100% var(--r70-stripes-bold-height) no-repeat,
+    linear-gradient(var(--paper), var(--paper)) top / 100% var(--r70-stripes-bold-height) no-repeat,
+    var(--footer-brown);
   color: var(--white);
-  padding: 81px max(5vw, calc((100vw - 1300px) / 2)) 22px;
+  padding: calc(70px + var(--r70-stripes-bold-height)) max(5vw, calc((100vw - 1300px) / 2)) 22px;
 }
 footer :focus-visible {
   outline-color: var(--gold-2);
@@ -2129,6 +2251,16 @@ footer :focus-visible {
   max-width: 300px;
   margin: 0;
 }
+/* Frase de marca con el estilo de la del hero (.hero-tagline): cursiva mostaza con raya.
+   Mostaza #f5bd45 sobre el marrón del footer: 8,5:1. */
+.footer-main .footer-tagline {
+  max-width: 340px;
+  margin: 2px 0 0;
+  font-size: clamp(20px, 1.7vw, 24px);
+  line-height: 1.25;
+  color: var(--r70-mustard-light);
+  text-shadow: none;
+}
 .footer-main b {
   color: var(--r70-mustard-light);
   font-size: 12px;
@@ -2141,6 +2273,47 @@ footer :focus-visible {
 }
 .footer-main a:hover {
   color: var(--r70-mustard-light);
+}
+/* Fila de confianza: pago seguro (tarjetas) y transportistas. Texto #ece0c8: 11,2:1. */
+.footer-trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 40px;
+  border-top: 1px solid #f3ead726;
+  padding: 22px 0;
+}
+/* El icono queda a la izquierda y el texto se parte a su lado; las tarjetas pasan juntas
+   a la línea siguiente si no caben. */
+.footer-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  color: #ece0c8;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.footer-trust-item > svg {
+  flex: none;
+  color: var(--r70-mustard-light);
+}
+.footer-trust-item > span {
+  min-width: 0;
+}
+.footer-cards {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.footer-card {
+  display: block;
+  width: 38px;
+  height: 24px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px #f3ead740;
 }
 /* Bottom band: rights, seller legal data and legal pages. */
 .footer-legal {
@@ -2253,6 +2426,33 @@ footer :focus-visible {
   .hero-carousel-stage {
     margin-right: 28px;
   }
+  /*
+   * Bloque "Parliamone" en una columna: placas debajo del botón y velo uniforme (el texto
+   * ocupa todo el ancho). Encuadre en el cañón y el coche. Medido: texto crema 7,3:1 o
+   * más, subtítulo 6:1 o más.
+   */
+  .cta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+  .cta-photo img {
+    object-position: 62% 50%;
+  }
+  .cta:before {
+    background:
+      linear-gradient(rgb(32 15 9 / 0.68), rgb(32 15 9 / 0.68)),
+      linear-gradient(
+        to bottom,
+        rgb(32 15 9 / 0.2),
+        rgb(32 15 9 / 0.1) 50%,
+        rgb(32 15 9 / 0.5)
+      );
+  }
+  /* Cabe a 320 px aunque las tres fotos sean apaisadas (3 × 1,15 − 2 × 0,32 ≈ 2,8 placas). */
+  .cta-plates {
+    --cta-plate: clamp(84px, 27vw, 150px);
+    min-height: calc(var(--cta-plate) * 1.5 + 32px);
+  }
 }
 @media (max-width: 1050px) {
   .nav-links {
@@ -2277,7 +2477,7 @@ footer :focus-visible {
     grid-template-columns: 1fr 1fr;
   }
   .cta {
-    gap: 56px;
+    column-gap: 56px;
   }
 }
 @media (max-width: 760px) {
@@ -2455,8 +2655,7 @@ footer :focus-visible {
     --cta-ring: 12px;
     --cta-gap: 4px;
     --cta-core: 46px;
-    grid-template-columns: 1fr;
-    gap: 25px;
+    gap: 28px;
     padding: 76px 25px 110px;
   }
   .cta h2 {
