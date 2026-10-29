@@ -2,7 +2,6 @@
 import "@fontsource/shrikhand/latin-400.css";
 // Home hero: western title and script subtitle. The latin subset already has every
 // accented letter of the six languages (é è à ç ñ ¿ ä ö ü ß, ’ and …).
-import "@fontsource/rye/latin-400.css";
 import "@fontsource/kaushan-script/latin-400.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";

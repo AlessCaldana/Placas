@@ -526,29 +526,28 @@ footer .footer-main .brand small {
 .hero-copy {
   min-width: 0;
 }
-/*
- * Título western (Rye) en mayúsculas: crema con sombra terracota y marrón (el terracota
- * del diseño no tiene contraste sobre la foto; así se mantiene como contorno).
- */
+/* Título con la letra de la web (Shrikhand), como el resto de títulos; la palabra
+   "vintage" en mostaza. Crema con sombra marrón: contraste alto sobre el velo. */
 .hero h1 {
-  font-family: "Rye", var(--ff-display);
+  font-family: var(--ff-display);
   font-weight: 400;
   font-synthesis: none;
-  font-size: clamp(40px, 4.2vw, 62px);
-  line-height: 1.12;
-  margin: 0 0 14px;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  font-size: clamp(40px, 4.4vw, 64px);
+  line-height: 1.06;
+  margin: 0 0 16px;
+  letter-spacing: 0;
   color: #fff3e0;
   /* Sin guiones: el tamaño móvil ya hace caber la palabra más larga; partir queda solo
      como último recurso para no desbordar. */
   overflow-wrap: break-word;
-  text-shadow:
-    0.04em 0.04em 0 var(--r70-red),
-    0.075em 0.075em 0 #2a120b;
+  text-shadow: 0.05em 0.05em 0 #2a120b;
+}
+.hero h1 em {
+  font-style: normal;
+  color: #f5bd45;
 }
 .hero.has-carousel h1 {
-  font-size: clamp(36px, 3.7vw, 54px);
+  font-size: clamp(38px, 4vw, 58px);
 }
 /* Subtítulo manuscrito (Kaushan Script) en petróleo claro: 4,7:1 o más sobre el velo. */
 .hero-subtitle {
@@ -2328,9 +2327,8 @@ footer :focus-visible {
     --stripe-scale: 0.58;
   }
   /*
-   * Baja con el ancho lo justo para que la palabra más larga de los 6 títulos
-   * ("CARRETERA", unas 6,6 veces el cuerpo en Rye en mayúsculas) quepa entera en el
-   * ancho útil (100vw menos los 48 px de padding): sin cortes feos a 320 px.
+   * Baja con el ancho lo justo para que la palabra más larga de los 6 títulos quepa
+   * entera en el ancho útil (100vw menos los 48 px de padding): sin cortes feos a 320 px.
    */
   .hero h1,
   .hero.has-carousel h1 {

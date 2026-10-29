@@ -151,7 +151,7 @@ export function HomePage({
         {festivity && <FestiveHeroDecor festivity={festivity} />}
         <div className="hero-content">
           <div className="hero-copy">
-            <h1>{t("hero.title")}</h1>
+            <h1>{t("hero.titleStart")}<em>{t("hero.titleEm")}</em>{t("hero.titleEnd")}</h1>
             <p className="hero-subtitle">{t("hero.subtitle")}</p>
             <p className="hero-text">{t("hero.text")}</p>
             <p className="hero-tagline"><span>{t("hero.tagline")}</span></p>
