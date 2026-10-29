@@ -97,6 +97,11 @@ export function HomePage({
       ?? candidates[0];
     return cover?.imageUrl ?? null;
   };
+  // Plates listed when the card is opened (categoryIds already include the parent).
+  const categoryCount = (categoryId: string) => {
+    const count = products.filter((product) => product.categoryIds.includes(categoryId)).length;
+    return count === 1 ? t("catalog.count.one") : t("catalog.count.other").replace("{n}", String(count));
+  };
   const productsTitle = showFeatured
     ? t("featured.title")
     : selectedCategoryName
@@ -215,7 +220,10 @@ export function HomePage({
                 }}
               >
                 <CategoryPhoto imageUrl={categoryCover(category.id)} initial={label.charAt(0)} />
-                <span className="category-copy"><b>{label}</b><i><Icon name="arrow" size={18} /></i></span>
+                <span className="category-copy">
+                  <span className="category-label"><b>{label}</b><small>{categoryCount(category.id)}</small></span>
+                  <i><Icon name="arrow" size={18} /></i>
+                </span>
               </button>
             );
           })}
@@ -237,7 +245,10 @@ export function HomePage({
                     }}
                   >
                     <CategoryPhoto imageUrl={categoryCover(subcategory.id)} initial={label.charAt(0)} />
-                    <span className="category-copy"><b>{label}</b><i><Icon name="arrow" size={18} /></i></span>
+                    <span className="category-copy">
+                      <span className="category-label"><b>{label}</b><small>{categoryCount(subcategory.id)}</small></span>
+                      <i><Icon name="arrow" size={18} /></i>
+                    </span>
                   </button>
                 );
               })}
@@ -350,6 +361,8 @@ function CategoryPhoto({ imageUrl, initial }: { imageUrl: string | null; initial
   }
   return (
     <span className="category-photo">
+      {/* Same photo enlarged and blurred behind the plate: fills the card without cropping it. */}
+      <span className="category-photo-backdrop" style={{ backgroundImage: `url(${JSON.stringify(imageUrl)})` }} />
       {/* The category name is the button text, so the photo is decorative. */}
       <img src={imageUrl} alt="" loading="lazy" />
     </span>

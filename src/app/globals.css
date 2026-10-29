@@ -1302,7 +1302,8 @@ html:has(.maintenance-admin-bar) .products-heading {
 .category-card.is-selected .category-copy i svg {
   transform: rotate(90deg);
 }
-/* Placa entera (contain) sobre crema: la foto no se recorta. */
+/* Placa entera (contain) sobre la misma foto ampliada y desenfocada: la tarjeta queda
+   llena y la placa no se recorta. */
 .category-photo {
   position: relative;
   display: grid;
@@ -1311,6 +1312,15 @@ html:has(.maintenance-admin-bar) .products-heading {
   background: #efe5cf;
   border-bottom: 2px solid var(--r70-brown-dark);
   overflow: hidden;
+  isolation: isolate;
+}
+.category-photo-backdrop {
+  position: absolute;
+  inset: -24px;
+  z-index: -1;
+  background: center / cover no-repeat;
+  filter: blur(18px) saturate(1.15) brightness(0.82);
+  transform: scale(1.1);
 }
 /* Absoluta: así una foto vertical no agranda la caja 3:2. */
 .category-photo img {
@@ -1321,6 +1331,7 @@ html:has(.maintenance-admin-bar) .products-heading {
   height: 100%;
   object-fit: contain;
   padding: 12px;
+  filter: drop-shadow(0 6px 10px rgba(30, 14, 8, 0.45));
 }
 /* Sin foto: bloque de color con la inicial. */
 .category-photo.is-empty {
@@ -1349,6 +1360,18 @@ html:has(.maintenance-admin-bar) .products-heading {
   padding: 12px 14px 13px 16px;
   background: var(--a);
   color: var(--fg);
+}
+.category-label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.category-label small {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
 }
 .category-copy b {
   min-width: 0;
