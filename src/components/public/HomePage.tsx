@@ -6,6 +6,8 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import { HeroCarousel } from "@/components/public/HeroCarousel";
 import { HeroStripes } from "@/components/public/HeroStripes";
+import { FestiveHeroDecor } from "@/components/public/FestiveHeroDecor";
+import { useFestivity } from "@/components/public/FestivityProvider";
 import { ProductCard } from "@/components/public/ProductCard";
 import { ProductDetailsDialog } from "@/components/public/ProductDetailsDialog";
 import { ReviewsSection } from "@/components/public/ReviewsSection";
@@ -41,6 +43,7 @@ export function HomePage({
   reviews?: PublicReview[];
 }) {
   const { locale } = useLocale();
+  const festivity = useFestivity();
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -130,12 +133,28 @@ export function HomePage({
   return (
     <>
       <section className={heroProducts.length ? "hero has-carousel" : "hero"}>
+        {/* Route 66 photo behind the hero (decorative). The <img> is in the first HTML with
+            high priority, so the browser fetches it right away without blocking the page. */}
+        <picture className="hero-photo">
+          <source type="image/webp" srcSet="/brand/hero-route66.webp" />
+          <img
+            src="/brand/hero-route66.jpg"
+            alt=""
+            width={1024}
+            height={572}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+          />
+        </picture>
         {heroProducts.length === 0 && <HeroStripes standalone />}
+        {festivity && <FestiveHeroDecor festivity={festivity} />}
         <div className="hero-content">
           <div className="hero-copy">
-            <div className="eyebrow light"><span /> {t("hero.eyebrow")}</div>
-            <h1>{t("hero.title1")}<br />{t("hero.title2")} <em>{t("hero.em")}</em></h1>
-            <p>{t("hero.text")}</p>
+            <h1>{t("hero.title")}</h1>
+            <p className="hero-subtitle">{t("hero.subtitle")}</p>
+            <p className="hero-text">{t("hero.text")}</p>
+            <p className="hero-tagline"><span>{t("hero.tagline")}</span></p>
             <div className="hero-buttons">
               <ButtonLink href="/#catalogo" kind="gold" icon="arrow">{t("cta.catalog")}</ButtonLink>
               <ButtonLink href={whatsappLink(whatsappGreeting(t, settings.name), settings.whatsappNumber)} kind="light" icon="chat">{t("cta.whatsapp")}</ButtonLink>

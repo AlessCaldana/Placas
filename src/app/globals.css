@@ -453,6 +453,46 @@ footer .footer-main .brand small {
   pointer-events: none;
 }
 /*
+ * Foto Route 66 de fondo (cartel a la izquierda, coche rojo a la derecha) bajo un velo
+ * marrón cálido: más denso detrás del texto, más ligero detrás del carrusel. Medido
+ * sobre la foto: el texto crema queda a 5,7:1 o más y el subtítulo a 4,7:1 o más.
+ */
+.hero-photo,
+.hero:before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hero-photo {
+  z-index: -3;
+}
+.hero-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+}
+.hero:before {
+  content: "";
+  z-index: -2;
+  background:
+    linear-gradient(
+      to right,
+      rgb(32 15 9 / 0.9) 0%,
+      rgb(32 15 9 / 0.84) 38%,
+      rgb(32 15 9 / 0.62) 58%,
+      rgb(32 15 9 / 0.42) 78%,
+      rgb(32 15 9 / 0.5) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgb(32 15 9 / 0.3),
+      transparent 30% 62%,
+      rgb(32 15 9 / 0.75)
+    );
+}
+/*
  * Rayas anni '70 (crema, mostaza, naranja, marrón): suben desde el borde inferior a la
  * izquierda del carrusel, doblan hacia la derecha y pasan por detrás de las placas.
  */
@@ -486,44 +526,70 @@ footer .footer-main .brand small {
 .hero-copy {
   min-width: 0;
 }
-/* Titolo in stile anni '70: display grassa e morbida con ombra piena spostata. */
+/*
+ * Título western (Rye) en mayúsculas: crema con sombra terracota y marrón (el terracota
+ * del diseño no tiene contraste sobre la foto; así se mantiene como contorno).
+ */
 .hero h1 {
-  font-family: var(--ff-display);
+  font-family: "Rye", var(--ff-display);
   font-weight: 400;
   font-synthesis: none;
-  font-size: clamp(48px, 5.6vw, 84px);
-  line-height: 1.04;
-  margin: 0 0 26px;
-  letter-spacing: 0;
+  font-size: clamp(40px, 4.2vw, 62px);
+  line-height: 1.12;
+  margin: 0 0 14px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: #fff3e0;
   /* Sin guiones: el tamaño móvil ya hace caber la palabra más larga; partir queda solo
      como último recurso para no desbordar. */
   overflow-wrap: break-word;
-  text-shadow: 0.05em 0.05em 0 var(--hero-brown);
+  text-shadow:
+    0.04em 0.04em 0 var(--r70-red),
+    0.075em 0.075em 0 #2a120b;
 }
 .hero.has-carousel h1 {
-  font-size: clamp(44px, 4.8vw, 68px);
+  font-size: clamp(36px, 3.7vw, 54px);
 }
-.hero h1 em {
-  font-style: normal;
-  color: #f5bd45;
+/* Subtítulo manuscrito (Kaushan Script) en petróleo claro: 4,7:1 o más sobre el velo. */
+.hero-subtitle {
+  max-width: 640px;
+  margin: 0 0 20px;
+  font-family: "Kaushan Script", var(--ff-serif);
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.3;
+  color: #bfe8df;
+  text-shadow: 0 1px 2px #1a0b0699;
 }
-.hero .eyebrow.light {
-  color: #fff6e8;
-}
-.hero .eyebrow span {
-  background: var(--gold-2);
-}
-.hero-copy > p {
-  max-width: 570px;
+.hero-text {
+  max-width: 600px;
+  margin: 0;
   font-size: 17px;
-  line-height: 1.7;
-  color: #fff6ecf2;
+  line-height: 1.65;
+  color: #fff6ec;
+}
+/* Frase final en banda terracota (blanco sobre #a5523e: 5,4:1); en móvil la banda
+   acompaña cada línea. */
+.hero-tagline {
+  max-width: 640px;
+  margin: 22px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-size: clamp(17px, 1.55vw, 21px);
+  line-height: 1.6;
+  color: #fff;
+}
+.hero-tagline span {
+  padding: 3px 12px;
+  background: var(--r70-red);
+  box-shadow: 3px 3px 0 #2a120b;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 .hero-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 36px;
+  margin-top: 32px;
 }
 /* Mostaza anni '70 con ombra piena marrone (testo scuro: contrasto 6,5:1). */
 .public-main .btn-gold,
@@ -781,6 +847,270 @@ footer .footer-main .brand small {
 .hero-carousel-dot[aria-current="true"] span {
   width: 18px;
   background: var(--gold-2);
+}
+
+/* ---------- Fiestas (calendario automático, src/lib/festivities.ts) ---------- */
+/*
+ * Sin fiesta no hay atributo data-festivity: nada de esto se aplica y la web se ve igual.
+ * Cada fiesta define su acento (decoración), un segundo color y la franja del saludo
+ * (texto 7,9:1 o más sobre su fondo).
+ */
+.festive-root {
+  display: contents;
+}
+[data-festivity="halloween"] {
+  --festive-accent: #e8833a;
+  --festive-accent-2: #7b4fb0;
+  --festive-banner-bg: #2a1530;
+  --festive-banner-text: #ffb877;
+}
+[data-festivity="christmas"] {
+  --festive-accent: #3f8a55;
+  --festive-accent-2: #e0a526;
+  --festive-banner-bg: #1e4a33;
+  --festive-banner-text: #fff3e0;
+}
+[data-festivity="new_year"] {
+  --festive-accent: #e0a526;
+  --festive-accent-2: #d9658a;
+  --festive-banner-bg: #1c2240;
+  --festive-banner-text: #f5d58a;
+}
+[data-festivity="epiphany"] {
+  --festive-accent: #8a6bc4;
+  --festive-accent-2: #f5bd45;
+  --festive-banner-bg: #3a2858;
+  --festive-banner-text: #fff3e0;
+}
+[data-festivity="valentines"] {
+  --festive-accent: #d8405f;
+  --festive-accent-2: #f2a1b5;
+  --festive-banner-bg: #8e2440;
+  --festive-banner-text: #fff6ec;
+}
+[data-festivity="easter"] {
+  --festive-accent: #a8d8c0;
+  --festive-accent-2: #f2b8c6;
+  --festive-banner-bg: #f3e3a1;
+  --festive-banner-text: #3d2216;
+}
+.festive-banner {
+  padding: 7px 16px;
+  background: var(--festive-banner-bg);
+  color: var(--festive-banner-text);
+  border-bottom: 2px solid var(--festive-accent);
+  text-align: center;
+}
+.festive-banner p {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+/* Toque de acento en el hero: brillo del carrusel (y línea inferior, en .festive-decor). */
+[data-festivity] .hero-carousel:before {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--festive-accent) 42%, transparent),
+    color-mix(in srgb, var(--festive-accent) 14%, transparent) 55%,
+    transparent
+  );
+}
+/*
+ * Decoración del hero: detrás del texto y del carrusel (.hero-content va después en el
+ * DOM, así que se pinta encima) y solo
+ * en los márgenes: una tira arriba (el hero deja 48–62 px libres) y piezas pequeñas en el
+ * hueco de abajo, por encima del buscador que se solapa 26 px.
+ */
+.festive-decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow: inset 0 -5px 0 var(--festive-accent);
+}
+.festive-string {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 56px;
+}
+.festive-piece {
+  position: absolute;
+  overflow: visible;
+}
+.festive-corner {
+  bottom: 36px;
+  height: 64px;
+  width: auto;
+}
+.festive-corner.is-left {
+  left: max(2%, 12px);
+}
+.festive-corner.is-right {
+  right: max(2%, 12px);
+}
+.is-easter .festive-corner.is-left {
+  height: 48px;
+}
+.festive-cobweb {
+  top: 0;
+  right: 0;
+  width: 110px;
+  height: 110px;
+}
+.festive-bat {
+  width: 46px;
+  height: 18px;
+  fill: #3a2048;
+  stroke: #ffb877;
+  stroke-opacity: 0.6;
+  stroke-width: 0.8;
+}
+.festive-bat.is-one {
+  top: 66px;
+  right: 9%;
+}
+.festive-bat.is-two {
+  top: 92px;
+  right: 15%;
+  transform: scale(0.7);
+}
+.festive-bat.is-three {
+  top: 30px;
+  left: 44%;
+  transform: scale(0.8);
+}
+.festive-flake {
+  width: 20px;
+  height: 20px;
+  color: #f3ead7;
+  opacity: 0.85;
+}
+.festive-flake.is-one {
+  bottom: 52px;
+  left: max(3%, 14px);
+}
+.festive-flake.is-two {
+  bottom: 74px;
+  left: calc(max(3%, 14px) + 46px);
+  width: 14px;
+  height: 14px;
+}
+.festive-flake.is-three {
+  bottom: 48px;
+  right: calc(max(3%, 14px) + 40px);
+}
+.festive-star {
+  width: 18px;
+  height: 18px;
+}
+.festive-star.is-one {
+  bottom: 40px;
+  right: max(3%, 14px);
+}
+.festive-star.is-two {
+  bottom: 70px;
+  left: calc(max(3%, 14px) + 96px);
+  width: 13px;
+  height: 13px;
+}
+.festive-confetti {
+  width: 8px;
+  height: 13px;
+}
+.festive-confetti.is-1 { bottom: 46px; left: max(3%, 14px); transform: rotate(24deg); }
+.festive-confetti.is-2 { bottom: 70px; left: calc(max(3%, 14px) + 34px); transform: rotate(-40deg); }
+.festive-confetti.is-3 { bottom: 40px; left: calc(max(3%, 14px) + 70px); transform: rotate(62deg); }
+.festive-confetti.is-4 { bottom: 66px; right: calc(max(3%, 14px) + 80px); transform: rotate(-18deg); }
+.festive-confetti.is-5 { bottom: 44px; right: calc(max(3%, 14px) + 110px); transform: rotate(40deg); }
+.festive-broom {
+  top: 58px;
+  right: 6%;
+  width: 120px;
+  height: 44px;
+}
+.festive-heart {
+  width: 22px;
+  height: 22px;
+}
+.festive-heart.is-one { bottom: 44px; left: max(3%, 14px); }
+.festive-heart.is-two { bottom: 72px; left: calc(max(3%, 14px) + 36px); width: 15px; height: 15px; }
+.festive-heart.is-three { bottom: 48px; right: max(3%, 14px); }
+.festive-heart.is-four { bottom: 76px; right: calc(max(3%, 14px) + 34px); width: 14px; height: 14px; }
+@media (max-width: 860px) {
+  /* Lo que en escritorio cae junto al carrusel, en una columna caería sobre el título. */
+  .festive-bat.is-one,
+  .festive-bat.is-two,
+  .festive-broom {
+    display: none;
+  }
+  .festive-cobweb {
+    width: 64px;
+    height: 64px;
+  }
+  .festive-corner {
+    bottom: 34px;
+    height: 48px;
+  }
+  .is-easter .festive-corner.is-left {
+    height: 38px;
+  }
+}
+@media (max-width: 760px) {
+  .festive-string {
+    height: 40px;
+  }
+  .festive-banner p {
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .festive-bat,
+  .festive-heart {
+    animation: festive-float 3.6s ease-in-out infinite alternate;
+  }
+  .festive-bat.is-two,
+  .festive-heart.is-two,
+  .festive-heart.is-four {
+    animation-delay: -1.8s;
+  }
+  .festive-flake,
+  .festive-star,
+  .festive-confetti {
+    animation: festive-twinkle 2.8s ease-in-out infinite alternate;
+  }
+  .festive-flake.is-two,
+  .festive-star.is-two,
+  .festive-confetti.is-2,
+  .festive-confetti.is-4 {
+    animation-delay: -1.4s;
+  }
+  .festive-broom {
+    animation: festive-float 4.4s ease-in-out infinite alternate;
+  }
+}
+/* Solo translate/opacity: no pisa el rotate/scale de cada pieza (propiedades separadas). */
+@keyframes festive-float {
+  to {
+    translate: 0 -6px;
+  }
+}
+@keyframes festive-twinkle {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ---------- Buscador ---------- */
@@ -1853,7 +2183,38 @@ footer :focus-visible {
     --stripe-scale: 0.72;
   }
   .hero.has-carousel h1 {
-    font-size: clamp(44px, 7vw, 60px);
+    font-size: clamp(38px, 6vw, 52px);
+  }
+  /*
+   * Una columna (texto y, debajo, el carrusel): la foto ocupa solo la parte de arriba,
+   * encuadrada en el cartel "Historic Route 66", y se funde en el marrón del velo; el
+   * resto del hero sigue en marrón cálido hacia el burdeos. Medido: texto crema 5,7:1 o
+   * más, subtítulo 4,7:1 o más; el carrusel queda sobre fondo liso oscuro.
+   */
+  .hero {
+    --hero-photo-height: clamp(500px, 150vw, 860px);
+    background: linear-gradient(
+      to bottom,
+      #200f09 var(--hero-photo-height),
+      #4a171d 100%
+    );
+  }
+  .hero-photo,
+  .hero:before {
+    bottom: auto;
+    height: var(--hero-photo-height);
+  }
+  .hero-photo img {
+    object-position: 30% 50%;
+  }
+  .hero:before {
+    background: linear-gradient(
+      to bottom,
+      rgb(32 15 9 / 0.62) 0%,
+      rgb(32 15 9 / 0.76) 40%,
+      rgb(32 15 9 / 0.88) 80%,
+      rgb(32 15 9) 100%
+    );
   }
   .hero-carousel {
     --plate-width: clamp(160px, 44vw, 220px);
@@ -1967,20 +2328,27 @@ footer :focus-visible {
     --stripe-scale: 0.58;
   }
   /*
-   * Mismo tamaño que antes desde ~360 px; por debajo baja lo justo para que la palabra
-   * más larga de los 6 idiomas ("Dekoschilder", unas 7 veces el cuerpo en Shrikhand)
-   * quepa entera en el ancho útil (100vw menos los 48 px de padding).
+   * Baja con el ancho lo justo para que la palabra más larga de los 6 títulos
+   * ("CARRETERA", unas 6,6 veces el cuerpo en Rye en mayúsculas) quepa entera en el
+   * ancho útil (100vw menos los 48 px de padding): sin cortes feos a 320 px.
    */
   .hero h1,
   .hero.has-carousel h1 {
-    font-size: min(clamp(38px, 12.2vw, 52px), calc((100vw - 48px) / 7.1));
+    font-size: min(clamp(32px, 11vw, 48px), calc((100vw - 48px) / 6.8));
+  }
+  .hero-subtitle {
+    font-size: 21px;
+    margin-bottom: 16px;
   }
   .hero-stripes.is-standalone {
     left: 52%;
     top: calc(100% - 110px);
   }
-  .hero-copy > p {
+  .hero-text {
     font-size: 15px;
+  }
+  .hero-tagline {
+    font-size: 17px;
   }
   .hero-buttons {
     flex-direction: column;
