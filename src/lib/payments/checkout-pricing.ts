@@ -5,8 +5,10 @@
 // from the platform, so the application fee must cover the platform fee AND
 // Stripe's fee: applicationFee = total - merchantAmount.
 
+// Platform fee: 1 € for each of the first 5 items, 0.30 € for each item after that.
 export const PLATFORM_FEE_PER_ITEM_CENTS = 100;
-export const PLATFORM_FEE_CAP_CENTS = 300;
+export const PLATFORM_FEE_FULL_ITEMS = 5;
+export const PLATFORM_FEE_EXTRA_ITEM_CENTS = 30;
 // Safety margin: price every card as if it were a non-EEA card (3.25 % + 0.25 €),
 // so the platform never loses money. With EEA cards (1.5 %) the difference stays
 // with the platform. Rates are in basis points (1 % = 100).
@@ -16,7 +18,7 @@ export const STRIPE_FIXED_CENTS = 25;
 export type CheckoutPricing = {
   /** What the merchant must receive (products + shipping). */
   merchantAmount: number;
-  /** Platform fee: 1 € per item (max 3 € per order) plus any extra (shipping rounding margin). */
+  /** Platform fee: 1 € per item up to 5, 0.30 € per item after that, plus any extra (shipping rounding margin). */
   platformFee: number;
   /** Worst-case Stripe fee covered by the price. */
   estimatedStripeFee: number;
@@ -31,7 +33,9 @@ export function estimateStripeFee(totalCents: number): number {
 }
 
 export function calculatePlatformFee(itemCount: number): number {
-  return Math.min(itemCount * PLATFORM_FEE_PER_ITEM_CENTS, PLATFORM_FEE_CAP_CENTS);
+  const fullItems = Math.min(itemCount, PLATFORM_FEE_FULL_ITEMS);
+  const extraItems = itemCount - fullItems;
+  return fullItems * PLATFORM_FEE_PER_ITEM_CENTS + extraItems * PLATFORM_FEE_EXTRA_ITEM_CENTS;
 }
 
 /**

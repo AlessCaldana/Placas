@@ -6,10 +6,14 @@ import {
 } from "@/lib/payments/checkout-pricing";
 
 describe("calculatePlatformFee", () => {
-  it("charges 1 € per item up to a 3 € cap", () => {
+  it("charges 1 € per item up to 5 items and 0.30 € per item after that", () => {
     expect(calculatePlatformFee(1)).toBe(100);
     expect(calculatePlatformFee(3)).toBe(300);
-    expect(calculatePlatformFee(10)).toBe(300);
+    expect(calculatePlatformFee(5)).toBe(500);
+    expect(calculatePlatformFee(6)).toBe(530);
+    expect(calculatePlatformFee(10)).toBe(650);
+    expect(calculatePlatformFee(15)).toBe(800);
+    expect(calculatePlatformFee(20)).toBe(950);
   });
 });
 
