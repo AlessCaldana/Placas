@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { BrandSeal } from "@/components/ui/BrandSeal";
+import { BrandName } from "@/components/public/Brand";
 import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import type { AdminRoleName } from "@/lib/validators/admin-user";
@@ -74,7 +75,9 @@ export function AdminShell({
           className="brand admin-brand"
           aria-label={t("brand.admin")}
         >
-          <BrandSeal size={44} />{shopName}<small>GESTIONE</small>
+          <BrandSeal size={44} />
+          <BrandName name={shopName} />
+          <small>GESTIONE</small>
         </Link>
         <nav aria-label={t("admin.menu")}>
           <small>{t("admin.menu")}</small>
@@ -137,7 +140,7 @@ export function AdminShell({
           </button>
           <b className="mobile-admin-brand">
             <BrandSeal size={34} />
-            {shopName}
+            <BrandName name={shopName} />
           </b>
         </div>
         {maintenance && (

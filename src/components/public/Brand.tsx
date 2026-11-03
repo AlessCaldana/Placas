@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import type { Locale } from "@/messages";
 import { translate } from "@/messages";
 import type { SiteSettings } from "@/lib/services/site-settings";
@@ -20,7 +21,17 @@ export function Brand({
       aria-label={translate(locale, "brand.home")}
     >
       {settings?.logoUrl ? <img className="brand-logo" src={settings.logoUrl} alt="" /> : <BrandSeal size={44} />}
-      {settings?.name ?? "PLACA"}<small>DECORATIVE ITALIANE</small>
+      <BrandName name={settings?.name ?? "PLACA"} />
+      <small>DECORATIVE ITALIANE</small>
     </Link>
+  );
+}
+
+/** Shop name that shrinks with its length so long names fit next to the seal. */
+export function BrandName({ name }: { name: string }) {
+  return (
+    <b className="brand-name" style={{ "--brand-chars": Math.max(name.length, 1) } as CSSProperties}>
+      {name}
+    </b>
   );
 }

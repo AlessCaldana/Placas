@@ -78,6 +78,7 @@
   padding: 24px 27px 18px 16px;
 }
 .admin-side .admin-brand {
+  --brand-fit: 165px;
   margin: 0 8px 30px;
   grid-template-rows: 26px 14px;
   letter-spacing: 0;
@@ -1056,6 +1057,8 @@ a.dashboard-task > svg {
     background: #f3ead714;
   }
   .mobile-admin-head .mobile-admin-brand {
+    --brand-fit: calc(100vw - 150px);
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 9px;
