@@ -1,7 +1,8 @@
 // Shipping price per order from the destination country and the parcel weight.
 // Source: Mondial Relay "Point Relais" prices from Belgium, VAT included
 // (mondialrelay.be, read 2026-11-03). The shop charges the next half euro above
-// each price (3.80 € → 4.00 €, 5.00 € → 5.50 €).
+// each price (3.80 € → 4.00 €, 5.00 € → 5.50 €): the carrier price goes to the
+// merchant, the rounding margin to the platform.
 
 /** Upper limit of each weight bracket in grams; a parcel pays the first bracket it fits in. */
 export const PARCEL_BRACKETS_GRAMS = [500, 1000, 2000, 4000, 10000, 25000] as const;
@@ -57,9 +58,23 @@ export function tablePriceCents(country: TableCountry, bracketIndex: number): nu
   return roundUpToNextHalfEuro(MONDIAL_RELAY_CENTS[country][bracketIndex]);
 }
 
-/** Shipping price in cents, or null when the country is not in the table or the parcel is too heavy. */
-export function shippingPriceFor(country: string, grams: number): number | null {
+export type ShippingQuote = {
+  /** Mondial Relay price: what the merchant needs to pay the carrier. */
+  carrierCents: number;
+  /** Charged to the customer: the carrier price rounded up to the next half euro. */
+  chargedCents: number;
+};
+
+/** Shipping quote in cents, or null when the country is not in the table or the parcel is too heavy. */
+export function shippingQuoteFor(country: string, grams: number): ShippingQuote | null {
   if (!isTableCountry(country)) return null;
   const bracketIndex = PARCEL_BRACKETS_GRAMS.findIndex((limit) => grams <= limit);
-  return bracketIndex === -1 ? null : tablePriceCents(country, bracketIndex);
+  if (bracketIndex === -1) return null;
+  const carrierCents = MONDIAL_RELAY_CENTS[country][bracketIndex];
+  return { carrierCents, chargedCents: roundUpToNextHalfEuro(carrierCents) };
+}
+
+/** Price charged to the customer in cents, or null when there is no quote. */
+export function shippingPriceFor(country: string, grams: number): number | null {
+  return shippingQuoteFor(country, grams)?.chargedCents ?? null;
 }

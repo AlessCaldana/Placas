@@ -50,7 +50,13 @@ describe("startCheckout failures", () => {
 
   it("charges shipping from the table by country and parcel weight", async () => {
     await startCheckout([{ productId: PRODUCT_ID, quantity: 3 }], "IT", "it", "http://localhost:3000");
-    expect(db.order.create.mock.calls[0][0].data).toMatchObject({ shippingCents: 750, productsCents: 6000 });
+    // 3 plates 20 x 30 to Italy: 1 kg bracket, Mondial Relay 7.30 € charged as 7.50 €.
+    // The merchant gets 7.30 €; the 0.20 € margin joins the 3 € platform fee.
+    expect(db.order.create.mock.calls[0][0].data).toMatchObject({
+      shippingCents: 730,
+      productsCents: 6000,
+      platformFeeCents: 320,
+    });
   });
 
   it("refuses a country without a table price before creating the order", async () => {

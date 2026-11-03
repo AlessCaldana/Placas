@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 import { generateOrderNumber } from "@/lib/order-number";
 import { calculateCheckoutPricing } from "@/lib/payments/checkout-pricing";
 import { availableShippingCountries, type ShippingCountry } from "@/lib/payments/shipping";
-import { estimateParcelGrams, shippingPriceFor } from "@/lib/payments/shipping-table";
+import { estimateParcelGrams, shippingQuoteFor } from "@/lib/payments/shipping-table";
 import { getConnectedAccountId, getStripe } from "@/lib/payments/stripe";
 import { getSiteSettings } from "@/lib/services/site-settings";
 import { extractBillingDetails } from "@/lib/validators/billing";
@@ -103,15 +103,21 @@ export async function startCheckout(
   });
 
   // Price by country and estimated parcel weight; over 25 kg does not fit one parcel.
-  const shippingCents = shippingPriceFor(
+  const quote = shippingQuoteFor(
     country,
     estimateParcelGrams(lines.map((line) => ({ size: line.product.size, quantity: line.quantity }))),
   );
-  if (shippingCents === null) throw new CheckoutError("parcel_too_heavy");
+  if (quote === null) throw new CheckoutError("parcel_too_heavy");
+  // The merchant receives the carrier price; the rounding margin goes to the platform fee.
+  const shippingCents = quote.carrierCents;
 
   const productsCents = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
-  const pricing = calculateCheckoutPricing(productsCents + shippingCents, itemCount);
+  const pricing = calculateCheckoutPricing(
+    productsCents + shippingCents,
+    itemCount,
+    quote.chargedCents - quote.carrierCents,
+  );
 
   const orderData = {
     country,

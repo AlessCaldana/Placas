@@ -16,7 +16,7 @@ export const STRIPE_FIXED_CENTS = 25;
 export type CheckoutPricing = {
   /** What the merchant must receive (products + shipping). */
   merchantAmount: number;
-  /** Platform fee: 1 € per item, max 3 € per order. */
+  /** Platform fee: 1 € per item (max 3 € per order) plus any extra (shipping rounding margin). */
   platformFee: number;
   /** Worst-case Stripe fee covered by the price. */
   estimatedStripeFee: number;
@@ -34,15 +34,26 @@ export function calculatePlatformFee(itemCount: number): number {
   return Math.min(itemCount * PLATFORM_FEE_PER_ITEM_CENTS, PLATFORM_FEE_CAP_CENTS);
 }
 
-export function calculateCheckoutPricing(merchantAmount: number, itemCount: number): CheckoutPricing {
+/**
+ * `extraPlatformCents` is added to the platform fee on top of the per-item fee
+ * (the shipping rounding margin), so the merchant only receives the carrier price.
+ */
+export function calculateCheckoutPricing(
+  merchantAmount: number,
+  itemCount: number,
+  extraPlatformCents = 0,
+): CheckoutPricing {
   if (!Number.isSafeInteger(merchantAmount) || merchantAmount <= 0) {
     throw new RangeError("merchantAmount must be a positive integer number of cents");
   }
   if (!Number.isSafeInteger(itemCount) || itemCount < 1) {
     throw new RangeError("itemCount must be a positive integer");
   }
+  if (!Number.isSafeInteger(extraPlatformCents) || extraPlatformCents < 0) {
+    throw new RangeError("extraPlatformCents must be a non-negative integer");
+  }
 
-  const platformFee = calculatePlatformFee(itemCount);
+  const platformFee = calculatePlatformFee(itemCount) + extraPlatformCents;
   // total = ceil((merchant + platformFee + fixed fee) / (1 - rate)), in integer arithmetic.
   const numerator = (merchantAmount + platformFee + STRIPE_FIXED_CENTS) * 10_000;
   const divisor = 10_000 - STRIPE_FEE_RATE_BPS;

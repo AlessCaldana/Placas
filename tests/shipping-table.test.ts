@@ -4,6 +4,7 @@ import {
   plateGrams,
   roundUpToNextHalfEuro,
   shippingPriceFor,
+  shippingQuoteFor,
   tablePriceCents,
   TABLE_COUNTRIES,
 } from "@/lib/payments/shipping-table";
@@ -39,6 +40,12 @@ describe("shipping table", () => {
     expect(shippingPriceFor("IT", 1108)).toBe(800);
     expect(shippingPriceFor("FR", 900)).toBe(600);
     expect(shippingPriceFor("PL", 25000)).toBe(3000);
+  });
+
+  it("keeps the carrier price apart from the rounding margin", () => {
+    expect(shippingQuoteFor("IT", 380)).toEqual({ carrierCents: 670, chargedCents: 700 });
+    expect(shippingQuoteFor("BE", 380)).toEqual({ carrierCents: 380, chargedCents: 400 });
+    expect(shippingQuoteFor("DE", 380)).toBeNull();
   });
 
   it("refuses countries outside the table and parcels over 25 kg", () => {
