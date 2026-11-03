@@ -74,6 +74,7 @@ export function ShoppingCart({
       insufficient_stock: "checkout.errorStock",
       product_unavailable: "checkout.errorUnavailable",
       shipping_unavailable: "checkout.errorShipping",
+      parcel_too_heavy: "checkout.errorTooHeavy",
       maintenance: "maintenance.apiError",
     };
     setPayError(t(errorKey[result?.error ?? ""] ?? "checkout.errorGeneric"));

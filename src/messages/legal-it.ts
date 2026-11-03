@@ -33,7 +33,8 @@ export type LegalContext = {
   reaNumber: string;
   /** WhatsApp contact, or null when the number is not configured. */
   whatsapp: { label: string; href: string } | null;
-  shipping: { italy: boolean; eu: boolean; world: string[] };
+  /** Where the shop ships: Italy on/off and the names of the other countries. */
+  shipping: { italy: boolean; eu: string[]; world: string[] };
 };
 
 export const legalPlaceholder = "[dato in fase di registrazione]";
@@ -426,7 +427,7 @@ export function salesConditions(ctx: LegalContext): LegalSection[] {
           "I prezzi sono espressi in euro e sono prezzi finali per il consumatore: comprendono l'IVA, ove dovuta, secondo il regime fiscale del venditore. Per le vendite a distanza verso consumatori di altri paesi dell'Unione Europea l'IVA può essere applicata tramite il regime dello sportello unico (OSS, One-Stop Shop), senza costi aggiuntivi per te.",
         ),
         p(
-          "Il totale da pagare è dato dal prezzo dei prodotti più la voce «Spedizione e gestione», che dipende dal paese di spedizione e viene mostrata nella pagina di pagamento prima della conferma. Non ci sono altri costi da pagare a noi.",
+          "Il totale da pagare è dato dal prezzo dei prodotti più la voce «Spedizione e gestione», che dipende dal paese di spedizione e dal peso del pacco e viene mostrata nella pagina di pagamento prima della conferma. Non ci sono altri costi da pagare a noi.",
         ),
         ...(ctx.shipping.world.length ? [customsNotice] : []),
       ],
@@ -562,7 +563,7 @@ export function salesConditions(ctx: LegalContext): LegalSection[] {
 export function shippingAndReturns(ctx: LegalContext): LegalSection[] {
   const zones: LegalInline[][] = [];
   if (ctx.shipping.italy) zones.push([strong("Italia")]);
-  if (ctx.shipping.eu) zones.push([strong("Unione Europea"), ": tutti gli altri paesi membri."]);
+  if (ctx.shipping.eu.length) zones.push([strong("Unione Europea"), `: ${joinItalian(ctx.shipping.eu)}.`]);
   if (ctx.shipping.world.length) zones.push([strong("Resto del mondo"), `: ${joinItalian(ctx.shipping.world)}.`]);
 
   return [
@@ -581,7 +582,7 @@ export function shippingAndReturns(ctx: LegalContext): LegalSection[] {
       title: "Costi di spedizione",
       blocks: [
         p(
-          "Il costo dipende dalla zona di destinazione ed è indicato nella pagina di pagamento con la voce «Spedizione e gestione», prima che tu confermi l'ordine.",
+          "Il costo dipende dal paese di destinazione e dal peso del pacco (cioè da quante e quali targhe ordini) ed è indicato nella pagina di pagamento con la voce «Spedizione e gestione», prima che tu confermi l'ordine. Gli ordini troppo grandi per un solo pacco si concordano su WhatsApp.",
         ),
         ...(ctx.shipping.world.length ? [customsNotice] : []),
       ],

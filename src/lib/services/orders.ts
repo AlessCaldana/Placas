@@ -3,7 +3,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db";
 import { generateOrderNumber } from "@/lib/order-number";
 import { calculateCheckoutPricing } from "@/lib/payments/checkout-pricing";
-import { shippingCostFor, type ShippingCountry } from "@/lib/payments/shipping";
+import { availableShippingCountries, type ShippingCountry } from "@/lib/payments/shipping";
+import { estimateParcelGrams, shippingPriceFor } from "@/lib/payments/shipping-table";
 import { getConnectedAccountId, getStripe } from "@/lib/payments/stripe";
 import { getSiteSettings } from "@/lib/services/site-settings";
 import { extractBillingDetails } from "@/lib/validators/billing";
@@ -18,6 +19,7 @@ export class CheckoutError extends Error {
     readonly code:
       | "invalid_cart"
       | "shipping_unavailable"
+      | "parcel_too_heavy"
       | "product_unavailable"
       | "insufficient_stock",
   ) {
@@ -78,8 +80,9 @@ export async function startCheckout(
 ): Promise<string> {
   const db = getDb();
   const settings = await getSiteSettings();
-  const shippingCents = shippingCostFor(country, settings.shippingRates);
-  if (shippingCents === null) throw new CheckoutError("shipping_unavailable");
+  if (!availableShippingCountries(settings.shippingRates).includes(country)) {
+    throw new CheckoutError("shipping_unavailable");
+  }
 
   const products = await db.product.findMany({
     where: {
@@ -87,7 +90,7 @@ export async function startCheckout(
       status: "PUBLISHED",
       category: { active: true },
     },
-    select: { id: true, referenceCode: true, name: true, price: true, quantity: true },
+    select: { id: true, referenceCode: true, name: true, price: true, quantity: true, size: true },
   });
 
   const lines = items.map((item) => {
@@ -98,6 +101,13 @@ export async function startCheckout(
     }
     return { product, quantity: item.quantity, unitPriceCents: priceToCents(product.price) };
   });
+
+  // Price by country and estimated parcel weight; over 25 kg does not fit one parcel.
+  const shippingCents = shippingPriceFor(
+    country,
+    estimateParcelGrams(lines.map((line) => ({ size: line.product.size, quantity: line.quantity }))),
+  );
+  if (shippingCents === null) throw new CheckoutError("parcel_too_heavy");
 
   const productsCents = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);

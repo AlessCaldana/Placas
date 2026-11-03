@@ -33,7 +33,7 @@ const items = [{ productId: PRODUCT_ID, quantity: 1 }];
 
 beforeEach(() => {
   db.product.findMany.mockReset().mockResolvedValue([
-    { id: PRODUCT_ID, referenceCode: "PF-001", name: "Plate", price: { toFixed: () => "20.00" }, quantity: 3 },
+    { id: PRODUCT_ID, referenceCode: "PF-001", name: "Plate", price: { toFixed: () => "20.00" }, quantity: 3, size: "20 x 30 cm" },
   ]);
   db.order.create.mockReset().mockResolvedValue({ id: ORDER_ID, orderNumber: "123456" });
   db.order.update.mockReset().mockResolvedValue({});
@@ -46,6 +46,16 @@ describe("startCheckout failures", () => {
       "https://checkout.stripe.com/c/pay/cs_test_ok",
     );
     expect(db.order.update).toHaveBeenCalledWith({ where: { id: ORDER_ID }, data: { stripeSessionId: "cs_test_ok" } });
+  });
+
+  it("charges shipping from the table by country and parcel weight", async () => {
+    await startCheckout([{ productId: PRODUCT_ID, quantity: 3 }], "IT", "it", "http://localhost:3000");
+    expect(db.order.create.mock.calls[0][0].data).toMatchObject({ shippingCents: 750, productsCents: 6000 });
+  });
+
+  it("refuses a country without a table price before creating the order", async () => {
+    await expect(startCheckout(items, "DE", "it", "http://localhost:3000")).rejects.toThrow("shipping_unavailable");
+    expect(db.order.create).not.toHaveBeenCalled();
   });
 
   it("cancels the order and rethrows when Stripe fails", async () => {

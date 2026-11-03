@@ -25,6 +25,7 @@ export const dynamic = "force-dynamic";
 const errorStatus: Record<CheckoutError["code"], number> = {
   invalid_cart: 400,
   shipping_unavailable: 400,
+  parcel_too_heavy: 400,
   product_unavailable: 409,
   insufficient_stock: 409,
 };

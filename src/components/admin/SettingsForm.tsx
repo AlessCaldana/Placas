@@ -4,10 +4,14 @@ import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import type { SiteSettings } from "@/lib/services/site-settings";
-import type { ShippingRates, ShippingZone } from "@/lib/payments/shipping";
+import type { ShippingRates } from "@/lib/payments/shipping";
+import { PARCEL_BRACKETS_GRAMS, TABLE_COUNTRIES, tablePriceCents } from "@/lib/payments/shipping-table";
 import { siteLegalFields, siteLegalMaxLength, type SiteLegalField } from "@/lib/validators/site-legal";
 
-const shippingZones: ShippingZone[] = ["IT", "EU", "WORLD"];
+// Switchable zones: the price comes from the shipping table; a zone is on when
+// it has any stored value (sent as "0") and off when empty.
+const shippingZones = ["IT", "EU"] as const;
+type SwitchableZone = (typeof shippingZones)[number];
 
 const legalInputs: Record<SiteLegalField, { type: "text" | "email"; autoComplete: string }> = {
   legalName: { type: "text", autoComplete: "organization" },
@@ -31,12 +35,12 @@ function isLegalField(value: unknown): value is SiteLegalField {
   return typeof value === "string" && (siteLegalFields as readonly string[]).includes(value);
 }
 
-function centsToInput(cents: number | null): string {
-  return cents === null ? "" : (cents / 100).toFixed(2);
+function shippingSwitches(rates: ShippingRates): Record<SwitchableZone, boolean> {
+  return { IT: rates.IT !== null, EU: rates.EU !== null };
 }
 
-function shippingInputs(rates: ShippingRates): Record<ShippingZone, string> {
-  return { IT: centsToInput(rates.IT), EU: centsToInput(rates.EU), WORLD: centsToInput(rates.WORLD) };
+function formatEuro(cents: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(cents / 100);
 }
 
 export function SettingsForm({
@@ -46,8 +50,9 @@ export function SettingsForm({
   initialSettings: SiteSettings;
   databaseError: boolean;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
+  const regionNames = new Intl.DisplayNames([locale], { type: "region" });
   const [settings, setSettings] = useState(initialSettings);
   // The chosen logo file and its object URL for the preview.
   const [logo, setLogo] = useState<{ file: File; previewUrl: string } | null>(null);
@@ -55,7 +60,7 @@ export function SettingsForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const [shipping, setShipping] = useState(() => shippingInputs(initialSettings.shippingRates));
+  const [shipping, setShipping] = useState(() => shippingSwitches(initialSettings.shippingRates));
   const [legal, setLegal] = useState(initialSettings.legal);
   const [legalError, setLegalError] = useState<SiteLegalField | null>(null);
   const logoFile = logo?.file ?? null;
@@ -102,7 +107,8 @@ export function SettingsForm({
     form.set("email", settings.email);
     form.set("phone", settings.phone);
     form.set("whatsappNumber", settings.whatsappNumber);
-    for (const zone of shippingZones) form.set(`shipping${zone}`, shipping[zone]);
+    for (const zone of shippingZones) form.set(`shipping${zone}`, shipping[zone] ? "0" : "");
+    form.set("shippingWORLD", "");
     for (const field of siteLegalFields) form.set(field, legal[field]);
     form.set("removeLogo", String(removeLogo));
     if (logoFile) form.set("logo", logoFile);
@@ -120,7 +126,7 @@ export function SettingsForm({
         return;
       }
       setSettings(result);
-      setShipping(shippingInputs(result.shippingRates));
+      setShipping(shippingSwitches(result.shippingRates));
       setLegal(result.legal);
       chooseLogo(null);
       setRemoveLogo(false);
@@ -193,25 +199,46 @@ export function SettingsForm({
         <h2>{t("admin.settings.shipping")}</h2>
         <p>{t("admin.settings.shippingHint")}</p>
         {shippingZones.map((zone) => (
-          <label key={zone}>
-            {t(`admin.settings.shipping${zone}`)}
+          <label key={zone} className="radio-row checkbox-row">
             <input
               name={`shipping${zone}`}
-              type="text"
-              inputMode="decimal"
-              placeholder="—"
-              value={shipping[zone]}
+              type="checkbox"
+              checked={shipping[zone]}
               onChange={(event) => {
-                const { value } = event.currentTarget;
+                const { checked } = event.currentTarget;
                 setSaved(false);
-                setShipping((current) => ({ ...current, [zone]: value }));
+                setShipping((current) => ({ ...current, [zone]: checked }));
               }}
-              maxLength={8}
-              pattern="\d{1,5}([.,]\d{1,2})?"
               disabled={databaseError || saving}
             />
+            <span>{t(`admin.settings.shipping${zone}`)}</span>
           </label>
         ))}
+        <div className="settings-table-wrap">
+          <table className="settings-shipping-table">
+            <caption>{t("admin.settings.shippingTable")}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("admin.settings.shippingCountry")}</th>
+                {PARCEL_BRACKETS_GRAMS.map((grams) => (
+                  <th scope="col" key={grams}>
+                    {t("admin.settings.shippingUpTo").replace("{kg}", new Intl.NumberFormat(locale).format(grams / 1000))}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {TABLE_COUNTRIES.map((country) => (
+                <tr key={country}>
+                  <th scope="row">{regionNames.of(country) ?? country}</th>
+                  {PARCEL_BRACKETS_GRAMS.map((grams, index) => (
+                    <td key={grams}>{formatEuro(tablePriceCents(country, index), locale)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="admin-card form-card settings-legal" aria-labelledby="settings-legal-title">

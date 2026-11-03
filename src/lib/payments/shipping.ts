@@ -1,4 +1,7 @@
-// Shipping zones and the countries the shop ships to. Prices live in site settings.
+// Shipping zones and the countries the shop ships to. The price comes from the
+// Mondial Relay table (shipping-table.ts); the zone settings only switch Italy and
+// the rest of the EU on (any stored value) or off (null).
+import { TABLE_COUNTRIES } from "@/lib/payments/shipping-table";
 
 export type ShippingZone = "IT" | "EU" | "WORLD";
 
@@ -25,12 +28,14 @@ export function shippingZoneFor(country: ShippingCountry): ShippingZone {
   return (EU_COUNTRIES as readonly string[]).includes(country) ? "EU" : "WORLD";
 }
 
-/** Shipping price in cents, or `null` when the shop does not ship there. */
-export function shippingCostFor(country: ShippingCountry, rates: ShippingRates): number | null {
-  return rates[shippingZoneFor(country)];
+/** Whether the zone of the country is switched on in the settings. */
+export function isZoneEnabled(country: ShippingCountry, rates: ShippingRates): boolean {
+  return rates[shippingZoneFor(country)] !== null;
 }
 
-/** Countries with a configured shipping price. */
+/** Countries with a price in the shipping table whose zone is switched on. */
 export function availableShippingCountries(rates: ShippingRates): ShippingCountry[] {
-  return SHIPPING_COUNTRIES.filter((country) => shippingCostFor(country, rates) !== null);
+  return SHIPPING_COUNTRIES.filter(
+    (country) => (TABLE_COUNTRIES as readonly string[]).includes(country) && isZoneEnabled(country, rates),
+  );
 }

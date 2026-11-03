@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   availableShippingCountries,
   isShippingCountry,
-  shippingCostFor,
   shippingZoneFor,
 } from "@/lib/payments/shipping";
 import { parseCheckoutItems } from "@/lib/services/orders";
@@ -18,18 +17,16 @@ describe("shipping zones", () => {
     expect(shippingZoneFor("CH")).toBe("WORLD");
   });
 
-  it("only offers countries whose zone has a price", () => {
-    const rates = { IT: 500, EU: 1200, WORLD: null };
-    expect(shippingCostFor("FR", rates)).toBe(1200);
-    expect(shippingCostFor("US", rates)).toBeNull();
-    const countries = availableShippingCountries(rates);
-    expect(countries).toContain("IT");
-    expect(countries).toContain("DE");
-    expect(countries).not.toContain("GB");
+  it("only offers table countries whose zone is switched on", () => {
+    const countries = availableShippingCountries({ IT: 500, EU: 1200, WORLD: 500 });
+    expect(countries).toEqual(["IT", "BE", "ES", "FR", "LU", "NL", "PL", "PT"]);
+    expect(countries).not.toContain("DE");
+    expect(countries).not.toContain("US");
   });
 
-  it("treats a free zone (0 €) as available", () => {
+  it("treats a zone stored as 0 as switched on and null as off", () => {
     expect(availableShippingCountries({ IT: 0, EU: null, WORLD: null })).toEqual(["IT"]);
+    expect(availableShippingCountries({ IT: null, EU: 0, WORLD: null })).not.toContain("IT");
   });
 
   it("rejects unknown country codes", () => {

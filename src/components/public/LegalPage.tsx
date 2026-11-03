@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { getRequestLocale } from "@/lib/locale";
 import { whatsappLink } from "@/lib/site";
-import { WORLD_COUNTRIES } from "@/lib/payments/shipping";
+import { availableShippingCountries, shippingZoneFor } from "@/lib/payments/shipping";
 import { defaultSiteSettings, getSiteSettings, type SiteSettings } from "@/lib/services/site-settings";
 import { translate, type Locale } from "@/messages";
 import {
@@ -31,6 +31,7 @@ function formatWhatsapp(digits: string): string {
 
 function buildLegalContext(settings: SiteSettings): LegalContext {
   const { legal, shippingRates } = settings;
+  const shippingCountries = availableShippingCountries(shippingRates);
   const regionNames = new Intl.DisplayNames(["it"], { type: "region" });
   const whatsappNumber = settings.whatsappNumber.replace(/\D/g, "");
   // "390000000000" is the placeholder used until the owner sets the real number.
@@ -46,9 +47,13 @@ function buildLegalContext(settings: SiteSettings): LegalContext {
     reaNumber: legal.reaNumber,
     whatsapp: hasWhatsapp ? { label: formatWhatsapp(whatsappNumber), href: whatsappLink(undefined, whatsappNumber) } : null,
     shipping: {
-      italy: shippingRates.IT !== null,
-      eu: shippingRates.EU !== null,
-      world: shippingRates.WORLD !== null ? WORLD_COUNTRIES.map((country) => regionNames.of(country) ?? country) : [],
+      italy: shippingCountries.includes("IT"),
+      eu: shippingCountries
+        .filter((country) => country !== "IT" && shippingZoneFor(country) === "EU")
+        .map((country) => regionNames.of(country) ?? country),
+      world: shippingCountries
+        .filter((country) => shippingZoneFor(country) === "WORLD")
+        .map((country) => regionNames.of(country) ?? country),
     },
   };
 }

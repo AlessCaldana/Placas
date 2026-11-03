@@ -1384,6 +1384,38 @@ a.dashboard-task > svg {
   max-height: 100px;
   object-fit: contain;
 }
+/* Shipping prices (read-only): scrolls sideways inside the card on narrow screens. */
+.settings-table-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+}
+.settings-shipping-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.settings-shipping-table caption {
+  margin-bottom: 8px;
+  text-align: left;
+  font-weight: 700;
+}
+.settings-shipping-table th,
+.settings-shipping-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.settings-shipping-table th[scope="row"],
+.settings-shipping-table thead th:first-child {
+  text-align: left;
+}
+.settings-shipping-table thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
 .settings-help {
   color: var(--muted);
   font-size: 12px;
