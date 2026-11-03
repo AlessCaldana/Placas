@@ -69,5 +69,8 @@
   "bugs": {
     "url": "https://github.com/AlessCaldana/Placas/issues"
   },
-  "homepage": "https://github.com/AlessCaldana/Placas#readme"
+  "homepage": "https://github.com/AlessCaldana/Placas#readme",
+  "overrides": {
+    "minimatch": "^11.0.1"
+  }
 }
