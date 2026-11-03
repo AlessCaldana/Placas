@@ -74,7 +74,7 @@ export function LocaleProvider({
             aria-modal="true"
             aria-labelledby="locale-prompt-title"
           >
-            <span className="eyebrow">PFdeco</span>
+            <span className="eyebrow"><span /> PFdeco</span>
             <h1 id="locale-prompt-title">{translate(locale, "language.choose")}</h1>
             <p>{translate(locale, "language.prompt")}</p>
             <div className="locale-options">

@@ -261,6 +261,7 @@ footer .footer-main .brand small {
 .locale-trigger > i {
   display: none;
 }
+/* Menú del header: marrón de la cabecera con borde mostaza y sombra retro. */
 .locale-menu {
   position: absolute;
   z-index: 80;
@@ -268,10 +269,10 @@ footer .footer-main .brand small {
   right: 0;
   width: 210px;
   padding: 6px;
-  border: 1px solid #ffffff26;
-  background: #2b2a26;
-  color: #fff;
-  box-shadow: 0 16px 40px #0004;
+  border: 2px solid var(--r70-mustard);
+  background: var(--r70-brown-dark);
+  color: var(--r70-cream);
+  box-shadow: 4px 4px 0 var(--r70-red), 0 16px 40px #0005;
 }
 .locale-menu button {
   width: 100%;
@@ -286,24 +287,27 @@ footer .footer-main .brand small {
   text-align: left;
   font: inherit;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 .locale-menu button:hover,
 .locale-menu button:focus-visible,
 .locale-menu button.active {
-  color: var(--gold-2);
-  background: #ffffff0e;
+  color: var(--r70-mustard-light);
+  background: #ffffff12;
   outline: none;
 }
 .locale-menu button small {
   margin-left: auto;
-  color: #ffffff70;
+  color: #f3ead780;
   font-size: 10px;
   letter-spacing: 0.08em;
 }
 .locale-menu button.active small {
-  color: var(--gold-2);
+  color: var(--r70-mustard-light);
 }
+/* Ventana de primera visita: tarjeta crema con rayas 70 arriba, borde marrón y
+   sombra terracota, como las tarjetas del catálogo. */
 .locale-backdrop {
   position: fixed;
   inset: 0;
@@ -311,27 +315,37 @@ footer .footer-main .brand small {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: #2b2a26e0;
+  background: #2a120bcc;
+  backdrop-filter: blur(4px);
 }
 .locale-prompt {
-  width: min(100%, 460px);
-  padding: 38px;
+  width: min(100%, 470px);
+  padding: 0 34px 32px;
+  overflow: hidden;
   background: var(--paper);
   color: var(--ink);
-  border: 1px solid #ffffff70;
-  border-top: 3px solid var(--gold);
-  box-shadow: 0 30px 100px #0006;
+  border: 2px solid var(--r70-brown-dark);
+  box-shadow: 8px 8px 0 var(--r70-red), 0 30px 80px #0007;
+}
+.locale-prompt::before {
+  content: "";
+  display: block;
+  height: var(--r70-stripes-bold-height);
+  margin: 0 -34px 26px;
+  background: var(--r70-stripes-bold);
 }
 .locale-prompt .eyebrow {
-  color: var(--gold);
+  margin-bottom: 10px;
+  color: var(--r70-red);
 }
 .locale-prompt h1 {
-  margin: 12px 0 8px;
-  font: 400 38px/1.08 var(--ff-serif);
-  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+  font: 400 clamp(30px, 7vw, 40px)/1.05 var(--ff-display);
+  font-synthesis: none;
+  color: var(--r70-brown-dark);
 }
 .locale-prompt > p {
-  margin: 0 0 26px;
+  margin: 0 0 24px;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.6;
@@ -339,34 +353,70 @@ footer .footer-main .brand small {
 .locale-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 11px;
+  gap: 12px;
 }
 .locale-options button {
-  min-height: 58px;
-  padding: 12px 15px;
+  min-height: 54px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 11px;
-  border: 1px solid var(--line);
-  background: #fffbf2;
-  color: var(--ink);
+  border: 2px solid var(--r70-brown-dark);
+  background: var(--white);
+  color: var(--r70-brown-dark);
+  box-shadow: 3px 3px 0 var(--r70-brown-dark);
   text-align: left;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 .locale-options button span {
   font-size: 18px;
   line-height: 1;
 }
-.locale-options button:hover,
+.locale-options button:hover {
+  background: var(--r70-mustard-soft);
+  box-shadow: 4px 4px 0 var(--r70-red);
+  transform: translate(-1px, -1px);
+}
 .locale-options button:focus-visible {
-  border-color: var(--green);
-  background: #f6efe0;
-  outline: 2px solid #2f6f6a25;
+  background: var(--r70-mustard-soft);
+  outline: 3px solid var(--r70-red);
   outline-offset: 2px;
-  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .locale-options button {
+    transition: none;
+  }
+  .locale-options button:hover {
+    transform: none;
+  }
+}
+@media (max-width: 420px) {
+  .locale-prompt {
+    padding: 0 20px 24px;
+  }
+  .locale-prompt::before {
+    margin: 0 -20px 22px;
+  }
+  .locale-options {
+    gap: 10px;
+  }
+  .locale-options button {
+    padding: 10px;
+    gap: 8px;
+    font-size: 14px;
+  }
+}
+/* "Nederlands" no cabe en dos columnas: una sola en móviles pequeños. */
+@media (max-width: 380px) {
+  .locale-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .locale-options button {
+    min-height: 46px;
+  }
 }
 
 /* ---------- Botones ---------- */
