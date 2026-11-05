@@ -9,6 +9,15 @@ import { listAdminCategories } from "@/lib/services/categories";
 import { translate } from "@/messages";
 import { requireAdminPage } from "@/lib/admin-auth";
 
+// Page params keep "%2F" encoded: a code like "PF-162 / 219" arrives as "PF-162 %2F 219".
+function decodeParam(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export default async function EditProductPage({
   params,
 }: {
@@ -17,8 +26,7 @@ export default async function EditProductPage({
   // The layout check does not re-run on client navigation; check next to the data.
   await requireAdminPage();
   if (!isDatabaseConfigured()) notFound();
-  const { referenceCode } = await params;
-  const product = await getAdminProduct(referenceCode).catch(() => null);
+  const product = await getAdminProduct(decodeParam((await params).referenceCode)).catch(() => null);
   if (!product) notFound();
   const initialDatabaseCategories = await listAdminCategories().catch(() => null);
 
