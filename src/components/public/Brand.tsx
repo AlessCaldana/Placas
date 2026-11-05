@@ -22,7 +22,6 @@ export function Brand({
     >
       {settings?.logoUrl ? <img className="brand-logo" src={settings.logoUrl} alt="" /> : <BrandSeal size={44} />}
       <BrandName name={settings?.name ?? "PLACA"} />
-      <small>DECORATIVE ITALIANE</small>
     </Link>
   );
 }

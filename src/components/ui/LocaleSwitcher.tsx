@@ -3,14 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { locales, type Locale } from "@/messages";
 import { useLocale } from "./LocaleProvider";
+import { Flag } from "./Flag";
 
-export const languages: Record<Locale, { flag: string; name: string }> = {
-  it: { flag: "🇮🇹", name: "Italiano" },
-  fr: { flag: "🇫🇷", name: "Français" },
-  es: { flag: "🇪🇸", name: "Español" },
-  en: { flag: "🇬🇧", name: "English" },
-  nl: { flag: "🇳🇱", name: "Nederlands" },
-  de: { flag: "🇩🇪", name: "Deutsch" },
+export const languages: Record<Locale, { name: string }> = {
+  it: { name: "Italiano" },
+  fr: { name: "Français" },
+  es: { name: "Español" },
+  en: { name: "English" },
+  nl: { name: "Nederlands" },
+  de: { name: "Deutsch" },
 };
 
 export function LocaleSwitcher() {
@@ -53,7 +54,7 @@ export function LocaleSwitcher() {
         aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="locale-current-flag" aria-hidden="true">{selected.flag}</span>
+        <span className="locale-current-flag" aria-hidden="true"><Flag locale={locale} height={16} /></span>
         <i aria-hidden="true" />
       </button>
       {open && (
@@ -73,7 +74,7 @@ export function LocaleSwitcher() {
                   setOpen(false);
                 }}
               >
-                <span className="locale-option-flag" aria-hidden="true">{language.flag}</span>
+                <span className="locale-option-flag" aria-hidden="true"><Flag locale={option} /></span>
                 <span>{language.name}</span>
                 <small>{option.toUpperCase()}</small>
               </button>

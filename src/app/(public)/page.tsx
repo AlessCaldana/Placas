@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { HomePage } from "@/components/public/HomePage";
+import { jsonLdText, storeStructuredData } from "@/lib/seo";
+import { translate } from "@/messages";
 import { demoCategories, demoProducts } from "@/lib/demo-data";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getRequestLocale } from "@/lib/locale";
@@ -25,6 +28,9 @@ async function loadPublishedReviews(): Promise<PublicReview[]> {
   }
 }
 
+// The home page is the address search engines should show for the shop.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
 export default async function Home() {
   // Maintenance: the layout shows the maintenance page; render and load nothing here.
   if (await isMaintenanceVisitor()) return null;
@@ -47,21 +53,38 @@ export default async function Home() {
       .catch(() => null);
     if (catalog) {
       const [categories, products, featuredIds, heroProducts] = catalog;
+      const description = translate(locale, "seo.description").replace(
+        "{name}",
+        settings.name,
+      );
       return (
-        <HomePage
-          categories={categories}
-          products={products}
-          featuredIds={featuredIds}
-          heroProducts={heroProducts}
-          settings={settings}
-          paymentsEnabled={isStripeConfigured()}
-          reviews={await reviewsPromise}
-        />
+        <>
+          <script
+            type="application/ld+json"
+            // Escaped by jsonLdText: shop data cannot close the script tag.
+            dangerouslySetInnerHTML={{
+              __html: jsonLdText(storeStructuredData(settings, description)),
+            }}
+          />
+          <HomePage
+            categories={categories}
+            products={products}
+            featuredIds={featuredIds}
+            heroProducts={heroProducts}
+            settings={settings}
+            paymentsEnabled={isStripeConfigured()}
+            reviews={await reviewsPromise}
+          />
+        </>
       );
     }
   }
 
-  const categories = demoCategories.map((name) => ({ id: `demo-${name}`, name, parentId: null }));
+  const categories = demoCategories.map((name) => ({
+    id: `demo-${name}`,
+    name,
+    parentId: null,
+  }));
   const products: PublicCatalogProduct[] = demoProducts.map((product, index) => {
     const categoryName = product.path.split(" · ")[0];
     const category = categories.find((item) => item.name === categoryName);

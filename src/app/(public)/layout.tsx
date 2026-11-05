@@ -15,16 +15,46 @@ import { getActiveFestivity } from "@/lib/festivities";
 import { getRequestLocale } from "@/lib/locale";
 import { getMaintenanceView } from "@/lib/maintenance-view";
 import { getMaintenanceState } from "@/lib/services/maintenance";
-import { translate } from "@/messages";
+import { translate, type Locale } from "@/messages";
+import { siteUrl } from "@/lib/seo";
 import { defaultSiteSettings, getSiteSettings } from "@/lib/services/site-settings";
 
 export const dynamic = "force-dynamic";
 
+const openGraphLocales: Record<Locale, string> = {
+  it: "it_IT",
+  es: "es_ES",
+  fr: "fr_FR",
+  en: "en_GB",
+  nl: "nl_NL",
+  de: "de_DE",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  if ((await getMaintenanceView()) !== "visitor") return {};
   const locale = await getRequestLocale();
   // No noindex: a short closure must not drop the site from search engines.
-  return { title: translate(locale, "maintenance.metaTitle") };
+  if ((await getMaintenanceView()) === "visitor") return { title: translate(locale, "maintenance.metaTitle") };
+  const settings = await getSiteSettings().catch(() => defaultSiteSettings());
+  const title = `${settings.name} — ${translate(locale, "seo.title")}`;
+  const description = translate(locale, "seo.description").replace("{name}", settings.name);
+  return {
+    metadataBase: new URL(siteUrl()),
+    // absolute: the root layout's "%s — PFdeco" template must not be added to the home title.
+    title: { absolute: title, template: `%s — ${settings.name}` },
+    description,
+    applicationName: settings.name,
+    // Link previews (WhatsApp, Facebook...) show the Route 66 photo.
+    openGraph: {
+      type: "website",
+      siteName: settings.name,
+      title,
+      description,
+      url: "/",
+      locale: openGraphLocales[locale],
+      images: [{ url: "/brand/hero-route66.jpg", width: 1024, height: 572, alt: settings.name }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: ["/brand/hero-route66.jpg"] },
+  };
 }
 
 export default async function PublicLayout({ children }: { children: ReactNode }) {

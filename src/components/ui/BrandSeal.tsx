@@ -54,7 +54,7 @@ export function BrandSeal({
       <circle cx="120" cy="120" r="108" fill="none" stroke="#e0a526" strokeWidth="3" />
       <circle cx="120" cy="120" r="78" fill="none" stroke="#e0a526" strokeWidth="3" />
       <text fontFamily="'DM Sans Variable', 'DM Sans', sans-serif" fontWeight="700" fontSize="17" letterSpacing="5" fill="#f3ead7">
-        <textPath href={`#${ringId}`}>PFDECO · DECORATIVE ITALIANE ·</textPath>
+        <textPath href={`#${ringId}`}>PFDECO · STYLE VINTAGE · TARGHE ·</textPath>
       </text>
       <g clipPath={`url(#${clipId})`}>
         <rect x="0" y="0" width="240" height="240" fill="#f3ead7" />

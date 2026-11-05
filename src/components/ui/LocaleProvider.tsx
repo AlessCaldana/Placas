@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Flag } from "./Flag";
 import { useRouter } from "next/navigation";
 import { locales, translate, type Locale } from "@/messages";
 
@@ -18,14 +19,6 @@ const languageNames: Record<Locale, string> = {
   en: "English",
   nl: "Nederlands",
   de: "Deutsch",
-};
-const languageFlags: Record<Locale, string> = {
-  it: "🇮🇹",
-  fr: "🇫🇷",
-  es: "🇪🇸",
-  en: "🇬🇧",
-  nl: "🇳🇱",
-  de: "🇩🇪",
 };
 
 export function LocaleProvider({
@@ -80,7 +73,7 @@ export function LocaleProvider({
             <div className="locale-options">
               {locales.map((option) => (
                 <button key={option} type="button" onClick={() => setLocale(option)}>
-                  <span aria-hidden="true">{languageFlags[option]}</span>
+                  <span aria-hidden="true"><Flag locale={option} height={16} /></span>
                   {languageNames[option]}
                 </button>
               ))}

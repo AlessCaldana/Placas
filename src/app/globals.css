@@ -176,13 +176,13 @@ a {
   font-weight: 500;
 }
 /*
- * Logo de la web pública (header y footer, ambos marrones): "PFdeco" en Shrikhand crema
- * junto al sello y "DECORATIVE ITALIANE" pequeño en mostaza (6,7:1 sobre #3d2216).
- * Solo aquí: /admin usa también .brand con su propio estilo.
+ * Logo de la web pública (header y footer, ambos marrones): el nombre en Shrikhand crema
+ * junto al sello, centrado en una sola fila. Solo aquí: /admin usa también .brand con
+ * su propio estilo.
  */
 .public-header .brand,
 footer .footer-main .brand {
-  grid-template-rows: 27px 12px;
+  grid-template-rows: 44px;
   gap: 0 11px;
   color: var(--r70-cream);
   font-family: var(--ff-display);
@@ -202,16 +202,6 @@ footer .footer-main .brand {
   .public-header .brand {
     --brand-fit: calc(100vw - 190px);
   }
-}
-.public-header .brand small,
-footer .footer-main .brand small {
-  align-self: start;
-  color: var(--r70-mustard);
-  font-family: var(--ff-sans);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  line-height: 12px;
 }
 .nav-links {
   display: flex;
@@ -269,13 +259,23 @@ footer .footer-main .brand small {
 }
 .locale-current-flag,
 .locale-option-flag {
-  font-size: 16px;
-  line-height: 1;
+  display: inline-flex;
+  line-height: 0;
 }
 .locale-current-flag {
   display: grid;
   place-items: center;
-  font-size: 22px;
+}
+/* Banderas dibujadas (Flag.tsx): borde fino para que el blanco no se pierda sobre crema. */
+.flag {
+  display: block;
+  flex: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #00000026;
+}
+.locale-current-flag .flag {
+  width: 24px;
+  height: 16px;
 }
 .locale-trigger > i {
   display: none;
@@ -2613,8 +2613,9 @@ footer :focus-visible {
     width: 36px;
     height: 40px;
   }
-  .nav-actions .locale-current-flag {
-    font-size: 19px;
+  .nav-actions .locale-current-flag .flag {
+    width: 21px;
+    height: 14px;
   }
   .mobile-menu {
     display: block;

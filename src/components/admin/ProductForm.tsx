@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { useLocale } from "@/components/ui/LocaleProvider";
 import { languages as localeLanguages } from "@/components/ui/LocaleSwitcher";
+import { Flag } from "@/components/ui/Flag";
 import { initialCategories, nextCatId, type Cat, type NewCat } from "@/lib/categories";
 import { categoryMessageKey } from "@/messages";
 import type { AdminProductDetails } from "@/lib/services/products";
@@ -618,7 +619,7 @@ export function ProductForm({
                     onClick={() => setTranslationLocale(locale)}
                     onKeyDown={onTranslationTabKeyDown}
                   >
-                    <span aria-hidden="true">{localeLanguages[locale].flag}</span>
+                    <span aria-hidden="true"><Flag locale={locale} /></span>
                     <span lang={locale}>{localeLanguages[locale].name}</span>
                     {filled && (
                       <span className="translation-filled">

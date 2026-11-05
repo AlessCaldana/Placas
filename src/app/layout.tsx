@@ -7,7 +7,7 @@ import { LocaleProvider } from "@/components/ui/LocaleProvider";
 import { getLocalePreference } from "@/lib/locale";
 
 export const metadata: Metadata = {
-  title: { default: "PFdeco — Decorative Italiane", template: "%s — PFdeco" },
+  title: { default: "PFdeco", template: "%s — PFdeco" },
   description: "Targhe decorative per raccontare le tue passioni.",
 };
 
