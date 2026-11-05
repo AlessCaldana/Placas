@@ -118,6 +118,8 @@ export function ProductForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteError, setDeleteError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  // Code the product is stored under: it changes when the code is edited and saved.
+  const [savedReference, setSavedReference] = useState(initialProduct?.referenceCode ?? "");
   const [translations, setTranslations] = useState<ProductTranslations>(
     () => initialProduct?.translations ?? emptyProductTranslations(),
   );
@@ -316,7 +318,7 @@ export function ProductForm({
     try {
       const response = await fetch(
         initialProduct
-          ? `/api/admin/products/${encodeURIComponent(initialProduct.referenceCode)}`
+          ? `/api/admin/products/${encodeURIComponent(savedReference)}`
           : "/api/admin/products",
         {
         method: initialProduct ? "PUT" : "POST",
@@ -344,6 +346,15 @@ export function ProductForm({
         return;
       }
 
+      if (initialProduct && product.referenceCode && product.referenceCode !== savedReference) {
+        // New code: later saves and deletes use it, and a reload opens this product.
+        setSavedReference(product.referenceCode);
+        window.history.replaceState(
+          null,
+          "",
+          `/admin/prodotti/${encodeURIComponent(product.referenceCode)}/modifica`,
+        );
+      }
       if (!initialProduct) {
         form.reset();
         setCategory("");
@@ -366,7 +377,7 @@ export function ProductForm({
     setDeleteError("");
     try {
       const response = await fetch(
-        `/api/admin/products/${encodeURIComponent(initialProduct.referenceCode)}`,
+        `/api/admin/products/${encodeURIComponent(savedReference)}`,
         { method: "DELETE" },
       );
       if (!response.ok) {
